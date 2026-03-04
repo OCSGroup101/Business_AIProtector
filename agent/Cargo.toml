@@ -77,7 +77,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # ─── System resource metrics (CPU, RAM) ───────────────────────────────────────
-sysinfo = { version = "0.30", default-features = false, features = ["system"] }
+sysinfo = { version = "0.38", default-features = false, features = ["system"] }
 
 # ─── File system watching (filesystem collector) ──────────────────────────────
 notify = { version = "6.1", features = ["serde"] }
