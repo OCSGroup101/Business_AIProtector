@@ -20,7 +20,9 @@ class Incident(Base):
     # Detection info
     rule_id: Mapped[str] = mapped_column(String(64), nullable=False)
     rule_name: Mapped[str] = mapped_column(String(256), nullable=False)
-    severity: Mapped[str] = mapped_column(String(16), nullable=False)  # CRITICAL|HIGH|MEDIUM|LOW|INFO
+    severity: Mapped[str] = mapped_column(
+        String(16), nullable=False
+    )  # CRITICAL|HIGH|MEDIUM|LOW|INFO
     mitre_techniques: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
 
     # Lifecycle: OPEN | INVESTIGATING | CONTAINED | RESOLVED | FALSE_POSITIVE
@@ -54,15 +56,21 @@ class Incident(Base):
 
 class IncidentEvent(Base):
     """Individual telemetry events linked to an incident (timeline)."""
+
     __tablename__ = "incident_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     incident_id: Mapped[str] = mapped_column(
-        String(30), ForeignKey("incidents.id", ondelete="CASCADE"), nullable=False, index=True
+        String(30),
+        ForeignKey("incidents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     event_id: Mapped[str] = mapped_column(String(30), nullable=False, unique=True)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     event_json: Mapped[dict] = mapped_column(JSON, nullable=False)
-    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     incident: Mapped["Incident"] = relationship("Incident", back_populates="events")

@@ -84,15 +84,17 @@ async def fetch_recent_urls() -> list[dict]:
         url_key = f"url:{url.lower()}"
         if url_key not in seen:
             seen.add(url_key)
-            results.append({
-                "ioc_type": "url",
-                "value": url,
-                "score": score,
-                "sources": sources,
-                "tags": tags,
-                "first_seen": first_seen,
-                "metadata": meta,
-            })
+            results.append(
+                {
+                    "ioc_type": "url",
+                    "value": url,
+                    "score": score,
+                    "sources": sources,
+                    "tags": tags,
+                    "first_seen": first_seen,
+                    "metadata": meta,
+                }
+            )
 
         # Emit domain or IP IOC extracted from the URL
         try:
@@ -106,22 +108,27 @@ async def fetch_recent_urls() -> list[dict]:
             host_key = f"{ioc_type}:{host.lower()}"
             if host_key not in seen:
                 seen.add(host_key)
-                results.append({
-                    "ioc_type": ioc_type,
-                    "value": host,
-                    "score": score,
-                    "sources": sources,
-                    "tags": tags,
-                    "first_seen": first_seen,
-                    "metadata": {"url_count": 1, "threat": entry.get("threat", "")},
-                })
+                results.append(
+                    {
+                        "ioc_type": ioc_type,
+                        "value": host,
+                        "score": score,
+                        "sources": sources,
+                        "tags": tags,
+                        "first_seen": first_seen,
+                        "metadata": {"url_count": 1, "threat": entry.get("threat", "")},
+                    }
+                )
 
-    logger.info("URLHaus: fetched %d IOCs from %d URLs", len(results), len(data.get("urls", [])))
+    logger.info(
+        "URLHaus: fetched %d IOCs from %d URLs", len(results), len(data.get("urls", []))
+    )
     return results
 
 
 def _is_ip(host: str) -> bool:
     import ipaddress
+
     try:
         ipaddress.ip_address(host)
         return True
