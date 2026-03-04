@@ -69,3 +69,6 @@ releases/
 
 # ─── Agent dev data directory ─────────────────────────────────────────────────
 .openclaw-dev-data/
+
+# ─── Internal ops docs (not for public repo) ──────────────────────────────────
+docs/github-config.md
