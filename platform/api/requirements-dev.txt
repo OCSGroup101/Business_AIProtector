@@ -9,4 +9,4 @@ mypy==1.11.2
 bandit[toml]==1.7.10
 semgrep==1.90.0
 factory-boy==3.3.1
-faker==30.3.0
+faker==40.5.1
