@@ -22,7 +22,12 @@ use crate::core::state::{AgentState, AgentStateManager};
 #[command(name = "openclaw-agent", version, about)]
 struct Cli {
     /// Path to configuration file
-    #[arg(short, long, default_value = "openclaw-agent.toml", env = "OPENCLAW_CONFIG")]
+    #[arg(
+        short,
+        long,
+        default_value = "openclaw-agent.toml",
+        env = "OPENCLAW_CONFIG"
+    )]
     config: String,
 
     /// Override log level (trace/debug/info/warn/error)
@@ -107,17 +112,17 @@ async fn run_enrollment(cfg: &AgentConfig, token: &str) -> Result<()> {
 }
 
 async fn run_agent(cfg: AgentConfig) -> Result<()> {
-    use std::sync::Arc;
+    use crate::collectors::CollectorSet;
     use crate::core::event_bus::EventBus;
     use crate::core::scheduler::Scheduler;
-    use crate::collectors::CollectorSet;
     use crate::detection::engine::DetectionEngine;
     use crate::detection::ioc_store::IocStore;
     use crate::platform_connector::alert_uploader::AlertUploader;
     use crate::platform_connector::heartbeat::HeartbeatService;
     use crate::platform_connector::intel_receiver::IntelReceiver;
-    use crate::platform_connector::telemetry_uploader::TelemetryUploader;
     use crate::platform_connector::policy_sync::PolicySync;
+    use crate::platform_connector::telemetry_uploader::TelemetryUploader;
+    use std::sync::Arc;
 
     // Initialize state manager
     let state_manager = AgentStateManager::new(&cfg)?;
@@ -196,10 +201,9 @@ async fn run_agent(cfg: AgentConfig) -> Result<()> {
 }
 
 fn init_tracing(level: &str, format: &str) -> Result<()> {
-    use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(level));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
 
     match format {
         "json" => {

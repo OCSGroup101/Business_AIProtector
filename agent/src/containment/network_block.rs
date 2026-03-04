@@ -38,9 +38,16 @@ fn block_windows_wfp(ip: &str) -> Result<()> {
     // For now: use netsh as a fallback
     use std::process::Command;
     let output = Command::new("netsh")
-        .args(["advfirewall", "firewall", "add", "rule",
-               "name=OpenClaw_Block", "dir=out",
-               "action=block", &format!("remoteip={}", ip)])
+        .args([
+            "advfirewall",
+            "firewall",
+            "add",
+            "rule",
+            "name=OpenClaw_Block",
+            "dir=out",
+            "action=block",
+            &format!("remoteip={}", ip),
+        ])
         .output()?;
     if !output.status.success() {
         anyhow::bail!("netsh failed: {}", String::from_utf8_lossy(&output.stderr));

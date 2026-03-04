@@ -80,8 +80,16 @@ mod tests {
 
     fn make_event(event_type: EventType) -> TelemetryEvent {
         TelemetryEvent::new(
-            "agt", "ten", "test", event_type, "host",
-            OsInfo { platform: "test".into(), version: "0".into(), arch: "x64".into() },
+            "agt",
+            "ten",
+            "test",
+            event_type,
+            "host",
+            OsInfo {
+                platform: "test".into(),
+                version: "0".into(),
+                arch: "x64".into(),
+            },
         )
     }
 

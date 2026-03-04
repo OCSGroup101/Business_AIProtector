@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use crate::core::event_bus::TelemetryEvent;
-use crate::detection::rule_loader::{Condition, CompiledRule, MatchType, SequenceStep};
+use crate::detection::rule_loader::{CompiledRule, Condition, MatchType, SequenceStep};
 
 // ─── Internal state types ─────────────────────────────────────────────────────
 
@@ -45,8 +45,7 @@ impl SequenceState {
 
     fn is_complete(&self, steps: &[SequenceStep]) -> bool {
         steps.iter().enumerate().all(|(i, step)| {
-            self.step_counts.get(i).copied().unwrap_or(0)
-                >= step.count_threshold.unwrap_or(1)
+            self.step_counts.get(i).copied().unwrap_or(0) >= step.count_threshold.unwrap_or(1)
         })
     }
 }
@@ -58,7 +57,9 @@ struct ThresholdState {
 
 impl ThresholdState {
     fn new() -> Self {
-        Self { timestamps: Vec::new() }
+        Self {
+            timestamps: Vec::new(),
+        }
     }
 
     /// Record a new matching event; prune timestamps outside `window`.
@@ -141,13 +142,17 @@ impl CorrelationTracker {
         };
         let window = Duration::from_secs(rule.match_block.window_seconds as u64);
         let entity = extract_entity(event, rule.match_block.correlation_key.as_deref());
-        let key = CorrelationKey { rule_id: rule_id.to_owned(), entity };
+        let key = CorrelationKey {
+            rule_id: rule_id.to_owned(),
+            entity,
+        };
 
         // Ensure state exists; reset it if the window has expired.
         // We do this before computing current_idx so the idx always reflects
         // the post-reset state (avoids stale idx after expiry).
         if !self.sequence_states.contains_key(&key) {
-            self.sequence_states.insert(key.clone(), SequenceState::new(steps.len()));
+            self.sequence_states
+                .insert(key.clone(), SequenceState::new(steps.len()));
         }
         {
             let state = self.sequence_states.get_mut(&key).unwrap();
@@ -213,22 +218,34 @@ impl CorrelationTracker {
         // Event type filter
         if !rule.match_block.event_types.is_empty() {
             let et = event.event_type.to_string();
-            if !rule.match_block.event_types.iter().any(|t| {
-                t == &et || t.replace('.', "_") == et
-            }) {
+            if !rule
+                .match_block
+                .event_types
+                .iter()
+                .any(|t| t == &et || t.replace('.', "_") == et)
+            {
                 return false;
             }
         }
 
         // Additional field conditions
-        if !rule.match_block.conditions.iter().all(|c| condition_matches(c, event)) {
+        if !rule
+            .match_block
+            .conditions
+            .iter()
+            .all(|c| condition_matches(c, event))
+        {
             return false;
         }
 
         let entity = extract_entity(event, rule.match_block.correlation_key.as_deref());
-        let key = CorrelationKey { rule_id: rule_id.to_owned(), entity };
+        let key = CorrelationKey {
+            rule_id: rule_id.to_owned(),
+            entity,
+        };
 
-        let state = self.threshold_states
+        let state = self
+            .threshold_states
             .entry(key.clone())
             .or_insert_with(ThresholdState::new);
 
@@ -247,7 +264,8 @@ impl CorrelationTracker {
 
     fn prune(&mut self, rules: &HashMap<String, CompiledRule>) {
         self.sequence_states.retain(|key, state| {
-            rules.get(&key.rule_id)
+            rules
+                .get(&key.rule_id)
                 .map(|c| {
                     let window = Duration::from_secs(c.rule.match_block.window_seconds as u64);
                     !state.is_expired(window)
@@ -255,7 +273,8 @@ impl CorrelationTracker {
                 .unwrap_or(false)
         });
         // Threshold state self-prunes on record(); just drop empty entries
-        self.threshold_states.retain(|_, state| !state.timestamps.is_empty());
+        self.threshold_states
+            .retain(|_, state| !state.timestamps.is_empty());
     }
 }
 
@@ -267,12 +286,16 @@ fn extract_entity(event: &TelemetryEvent, key: Option<&str>) -> String {
     match key {
         None => "global".to_owned(),
         Some("hostname") => event.hostname.clone(),
-        Some("principal.user") => event.principal.as_ref()
+        Some("principal.user") => event
+            .principal
+            .as_ref()
             .map(|p| p.user.clone())
             .unwrap_or_else(|| "unknown".to_owned()),
         Some(field) if field.starts_with("payload.") => {
             let k = &field["payload.".len()..];
-            event.payload.get(k)
+            event
+                .payload
+                .get(k)
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
                 .to_owned()
@@ -297,20 +320,30 @@ pub fn condition_matches(condition: &Condition, event: &TelemetryEvent) -> bool 
         None => return false,
     };
     match condition.operator.as_str() {
-        "in" => condition.values.iter().any(|v| v.eq_ignore_ascii_case(&value)),
-        "eq" => condition.values.first()
+        "in" => condition
+            .values
+            .iter()
+            .any(|v| v.eq_ignore_ascii_case(&value)),
+        "eq" => condition
+            .values
+            .first()
             .map(|v| v.eq_ignore_ascii_case(&value))
             .unwrap_or(false),
-        "contains" => condition.values.iter().any(|v| {
-            value.to_lowercase().contains(&v.to_lowercase())
-        }),
-        "starts_with" => condition.values.iter().any(|v| {
-            value.to_lowercase().starts_with(&v.to_lowercase())
-        }),
-        "ends_with" => condition.values.iter().any(|v| {
-            value.to_lowercase().ends_with(&v.to_lowercase())
-        }),
-        "gt" => condition.values.first()
+        "contains" => condition
+            .values
+            .iter()
+            .any(|v| value.to_lowercase().contains(&v.to_lowercase())),
+        "starts_with" => condition
+            .values
+            .iter()
+            .any(|v| value.to_lowercase().starts_with(&v.to_lowercase())),
+        "ends_with" => condition
+            .values
+            .iter()
+            .any(|v| value.to_lowercase().ends_with(&v.to_lowercase())),
+        "gt" => condition
+            .values
+            .first()
             .and_then(|v| v.parse::<f64>().ok())
             .zip(value.parse::<f64>().ok())
             .map(|(threshold, val)| val > threshold)
@@ -342,9 +375,16 @@ mod tests {
 
     fn base_event(event_type: EventType) -> TelemetryEvent {
         TelemetryEvent::new(
-            "agent1", "tenant1", "test",
-            event_type, "host-01",
-            OsInfo { platform: "linux".into(), version: "22.04".into(), arch: "x86_64".into() },
+            "agent1",
+            "tenant1",
+            "test",
+            event_type,
+            "host-01",
+            OsInfo {
+                platform: "linux".into(),
+                version: "22.04".into(),
+                arch: "x86_64".into(),
+            },
         )
     }
 
@@ -376,7 +416,12 @@ mod tests {
         (id.to_owned(), compiled)
     }
 
-    fn thr_rule(id: &str, event_type: &str, threshold: usize, window_secs: u32) -> (String, CompiledRule) {
+    fn thr_rule(
+        id: &str,
+        event_type: &str,
+        threshold: usize,
+        window_secs: u32,
+    ) -> (String, CompiledRule) {
         let compiled = CompiledRule {
             rule: DetectionRule {
                 id: id.to_owned(),
@@ -426,18 +471,30 @@ mod tests {
 
         let ev = base_event(EventType::AuthLogonFailure);
         tracker.process_event(&ev, &rules);
-        assert!(tracker.process_event(&ev, &rules).contains(&"THR-002".to_owned()));
+        assert!(tracker
+            .process_event(&ev, &rules)
+            .contains(&"THR-002".to_owned()));
         // Resets; needs 2 more to fire again
         assert!(tracker.process_event(&ev, &rules).is_empty());
-        assert!(tracker.process_event(&ev, &rules).contains(&"THR-002".to_owned()));
+        assert!(tracker
+            .process_event(&ev, &rules)
+            .contains(&"THR-002".to_owned()));
     }
 
     #[test]
     fn sequence_fires_in_order() {
         let mut tracker = CorrelationTracker::new();
         let steps = vec![
-            SequenceStep { event_type: "process_create".into(), conditions: vec![], count_threshold: None },
-            SequenceStep { event_type: "network_connect".into(), conditions: vec![], count_threshold: None },
+            SequenceStep {
+                event_type: "process_create".into(),
+                conditions: vec![],
+                count_threshold: None,
+            },
+            SequenceStep {
+                event_type: "network_connect".into(),
+                conditions: vec![],
+                count_threshold: None,
+            },
         ];
         let mut rules = HashMap::new();
         let (id, rule) = seq_rule("SEQ-001", steps, 60);
@@ -446,7 +503,10 @@ mod tests {
         let proc_ev = base_event(EventType::ProcessCreate);
         let net_ev = base_event(EventType::NetworkConnect);
 
-        assert!(tracker.process_event(&proc_ev, &rules).is_empty(), "step 1 alone should not fire");
+        assert!(
+            tracker.process_event(&proc_ev, &rules).is_empty(),
+            "step 1 alone should not fire"
+        );
         assert_eq!(tracker.process_event(&net_ev, &rules), vec!["SEQ-001"]);
     }
 
@@ -454,8 +514,16 @@ mod tests {
     fn sequence_requires_step_order() {
         let mut tracker = CorrelationTracker::new();
         let steps = vec![
-            SequenceStep { event_type: "process_create".into(), conditions: vec![], count_threshold: None },
-            SequenceStep { event_type: "network_connect".into(), conditions: vec![], count_threshold: None },
+            SequenceStep {
+                event_type: "process_create".into(),
+                conditions: vec![],
+                count_threshold: None,
+            },
+            SequenceStep {
+                event_type: "network_connect".into(),
+                conditions: vec![],
+                count_threshold: None,
+            },
         ];
         let mut rules = HashMap::new();
         let (id, rule) = seq_rule("SEQ-002", steps, 60);
@@ -476,8 +544,16 @@ mod tests {
     fn sequence_resets_after_fire() {
         let mut tracker = CorrelationTracker::new();
         let steps = vec![
-            SequenceStep { event_type: "process_create".into(), conditions: vec![], count_threshold: None },
-            SequenceStep { event_type: "file_modify".into(), conditions: vec![], count_threshold: None },
+            SequenceStep {
+                event_type: "process_create".into(),
+                conditions: vec![],
+                count_threshold: None,
+            },
+            SequenceStep {
+                event_type: "file_modify".into(),
+                conditions: vec![],
+                count_threshold: None,
+            },
         ];
         let mut rules = HashMap::new();
         let (id, rule) = seq_rule("SEQ-003", steps, 60);
@@ -487,7 +563,9 @@ mod tests {
         let file_ev = base_event(EventType::FileModify);
 
         tracker.process_event(&proc_ev, &rules);
-        assert!(tracker.process_event(&file_ev, &rules).contains(&"SEQ-003".to_owned()));
+        assert!(tracker
+            .process_event(&file_ev, &rules)
+            .contains(&"SEQ-003".to_owned()));
 
         // After reset, step 1 alone should not re-fire the rule
         assert!(tracker.process_event(&file_ev, &rules).is_empty());

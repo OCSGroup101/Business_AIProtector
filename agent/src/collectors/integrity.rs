@@ -34,7 +34,9 @@ impl IntegrityCollector {
 
 #[async_trait]
 impl Collector for IntegrityCollector {
-    fn name(&self) -> &'static str { "integrity" }
+    fn name(&self) -> &'static str {
+        "integrity"
+    }
 
     async fn run(self: Box<Self>, publisher: EventPublisher) -> Result<()> {
         info!("IntegrityCollector starting (Phase 2 — stub mode)");

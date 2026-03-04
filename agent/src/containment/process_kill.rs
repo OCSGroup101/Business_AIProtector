@@ -39,11 +39,18 @@ fn terminate_windows(pid: u32) -> Result<()> {
 fn terminate_unix(pid: u32) -> Result<()> {
     use std::process::Command;
 
-    let output = Command::new("kill").arg("-9").arg(pid.to_string()).output()?;
+    let output = Command::new("kill")
+        .arg("-9")
+        .arg(pid.to_string())
+        .output()?;
     if output.status.success() {
         info!(pid, "Process terminated via kill -9");
         Ok(())
     } else {
-        anyhow::bail!("kill -9 {} failed: {}", pid, String::from_utf8_lossy(&output.stderr))
+        anyhow::bail!(
+            "kill -9 {} failed: {}",
+            pid,
+            String::from_utf8_lossy(&output.stderr)
+        )
     }
 }
