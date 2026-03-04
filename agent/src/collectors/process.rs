@@ -27,7 +27,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::json;
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::collectors::Collector;
 use crate::config::AgentConfig;

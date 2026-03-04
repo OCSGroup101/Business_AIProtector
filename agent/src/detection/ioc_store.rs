@@ -29,7 +29,7 @@ impl IocStore {
             .open(&lmdb_path)?;
 
         let db = {
-            let mut txn = env.begin_rw_txn()?;
+            let txn = env.begin_rw_txn()?;
             // SAFETY: No concurrent transactions are open at this point; called once during init.
             let db = unsafe { txn.create_db(Some("iocs"), DatabaseFlags::empty()) }?;
             txn.commit()?;

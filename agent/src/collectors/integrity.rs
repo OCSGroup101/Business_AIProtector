@@ -12,7 +12,7 @@ use tracing::info;
 
 use crate::collectors::Collector;
 use crate::config::AgentConfig;
-use crate::core::event_bus::{EventPublisher, EventType, OsInfo, TelemetryEvent};
+use crate::core::event_bus::{EventPublisher, OsInfo};
 
 pub struct IntegrityCollector {
     agent_id: String,
@@ -22,7 +22,7 @@ pub struct IntegrityCollector {
 }
 
 impl IntegrityCollector {
-    pub fn new(cfg: &AgentConfig) -> Result<Self> {
+    pub fn new(_cfg: &AgentConfig) -> Result<Self> {
         Ok(Self {
             agent_id: String::new(),
             tenant_id: String::new(),
@@ -38,7 +38,7 @@ impl Collector for IntegrityCollector {
         "integrity"
     }
 
-    async fn run(self: Box<Self>, publisher: EventPublisher) -> Result<()> {
+    async fn run(self: Box<Self>, _publisher: EventPublisher) -> Result<()> {
         info!("IntegrityCollector starting (Phase 2 — stub mode)");
         // Phase 2: Build baseline of system32/*.exe SHA-256 hashes on first run.
         // Store in SQLite. On file modification events from FilesystemCollector,

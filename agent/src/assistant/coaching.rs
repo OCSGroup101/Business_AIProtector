@@ -1,7 +1,6 @@
 // Risk behavior explanation and coaching for end users.
 // Uses Claude API with fallback to static templates.
 
-use anyhow::Result;
 use tracing::warn;
 
 use crate::assistant::claude_client::ClaudeClient;
