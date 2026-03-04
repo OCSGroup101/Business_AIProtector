@@ -64,8 +64,7 @@ impl AlertUploader {
 
             // Drain any additional alerts that arrive within DRAIN_TIMEOUT_MS
             let mut batch = vec![first];
-            let deadline = tokio::time::Instant::now()
-                + Duration::from_millis(DRAIN_TIMEOUT_MS);
+            let deadline = tokio::time::Instant::now() + Duration::from_millis(DRAIN_TIMEOUT_MS);
 
             loop {
                 if batch.len() >= MAX_BATCH {

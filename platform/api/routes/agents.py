@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from ..command_queue import push_command
-from ..database import get_db, get_tenant_session
+from ..database import get_tenant_session
 from ..models.agent import Agent
 from ..middleware.rbac import Permission, require_permission
 
@@ -45,7 +45,7 @@ async def list_agents(
     """List all agents for the current tenant."""
     query = (
         select(Agent)
-        .where(Agent.is_active == True)
+        .where(Agent.is_active.is_(True))
         .order_by(desc(Agent.last_heartbeat_at))
         .limit(limit)
         .offset(offset)

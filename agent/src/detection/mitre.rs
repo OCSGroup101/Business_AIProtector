@@ -16,23 +16,23 @@ impl MitreTagger {
         m.insert("T1059.005", "TA0002"); // Execution — VBScript
         m.insert("T1059.007", "TA0002"); // Execution — JavaScript
         m.insert("T1204.002", "TA0002"); // Execution — Malicious File
-        m.insert("T1106", "TA0002");     // Execution — Native API
+        m.insert("T1106", "TA0002"); // Execution — Native API
         m.insert("T1547.001", "TA0003"); // Persistence — Registry Run Keys
         m.insert("T1053.005", "TA0003"); // Persistence — Scheduled Task
         m.insert("T1543.003", "TA0003"); // Persistence — Windows Service
         m.insert("T1574.002", "TA0003"); // Persistence — DLL Side-Loading
         m.insert("T1548.002", "TA0004"); // Privilege Escalation — UAC Bypass
         m.insert("T1055.001", "TA0004"); // Privilege Escalation — Process Injection
-        m.insert("T1078", "TA0004");     // Privilege Escalation — Valid Accounts
+        m.insert("T1078", "TA0004"); // Privilege Escalation — Valid Accounts
         m.insert("T1036.005", "TA0005"); // Defense Evasion — Match Legitimate Name
         m.insert("T1070.001", "TA0005"); // Defense Evasion — Clear Windows Event Logs
         m.insert("T1562.001", "TA0005"); // Defense Evasion — Disable Security Tools
-        m.insert("T1027", "TA0005");     // Defense Evasion — Obfuscated Files
+        m.insert("T1027", "TA0005"); // Defense Evasion — Obfuscated Files
         m.insert("T1003.001", "TA0006"); // Credential Access — LSASS Memory
         m.insert("T1110.001", "TA0006"); // Credential Access — Brute Force
         m.insert("T1552.001", "TA0006"); // Credential Access — Credentials in Files
-        m.insert("T1082", "TA0007");     // Discovery — System Information
-        m.insert("T1016", "TA0007");     // Discovery — System Network Config
+        m.insert("T1082", "TA0007"); // Discovery — System Information
+        m.insert("T1016", "TA0007"); // Discovery — System Network Config
         m.insert("T1087.002", "TA0007"); // Discovery — Domain Account
         m.insert("T1021.001", "TA0008"); // Lateral Movement — RDP
         m.insert("T1021.002", "TA0008"); // Lateral Movement — SMB
@@ -40,13 +40,15 @@ impl MitreTagger {
         m.insert("T1560.001", "TA0009"); // Collection — Archive via Utility
         m.insert("T1074.001", "TA0009"); // Collection — Local Data Staging
         m.insert("T1071.001", "TA0011"); // C2 — Web Protocols
-        m.insert("T1105", "TA0011");     // C2 — Ingress Tool Transfer
+        m.insert("T1105", "TA0011"); // C2 — Ingress Tool Transfer
         m.insert("T1573.002", "TA0011"); // C2 — Asymmetric Cryptography
-        m.insert("T1041", "TA0010");     // Exfiltration — Exfil Over C2
+        m.insert("T1041", "TA0010"); // Exfiltration — Exfil Over C2
         m.insert("T1048.003", "TA0010"); // Exfiltration — DNS
-        m.insert("T1486", "TA0040");     // Impact — Data Encrypted for Impact (Ransomware)
-        m.insert("T1490", "TA0040");     // Impact — Inhibit System Recovery
-        Self { technique_to_tactic: m }
+        m.insert("T1486", "TA0040"); // Impact — Data Encrypted for Impact (Ransomware)
+        m.insert("T1490", "TA0040"); // Impact — Inhibit System Recovery
+        Self {
+            technique_to_tactic: m,
+        }
     }
 
     /// Generate MITRE tags for a list of technique IDs.
@@ -66,7 +68,9 @@ impl MitreTagger {
 }
 
 impl Default for MitreTagger {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

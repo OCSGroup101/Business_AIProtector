@@ -18,8 +18,8 @@ use crate::config::AgentConfig;
 use crate::containment::actions::{ContainmentAction, ContainmentDispatcher};
 use crate::core::event_bus::{DetectionHit, EventType, Severity, TelemetryEvent};
 use crate::detection::ioc_store::IocStore;
-use crate::detection::rule_loader::{CompiledRule, DetectionRule, MatchType, RuleLoader};
 use crate::detection::mitre::MitreTagger;
+use crate::detection::rule_loader::{CompiledRule, DetectionRule, MatchType, RuleLoader};
 use crate::platform_connector::policy_sync::PolicyHandle;
 
 /// A recent-event window for heuristic rules (sliding window correlation).
@@ -44,16 +44,21 @@ impl DetectionEngine {
         ioc_store: Arc<IocStore>,
         alert_sender: mpsc::Sender<TelemetryEvent>,
     ) -> Result<Self> {
-
         let mut rule_loader = RuleLoader::new()?;
         // Prefer explicit rules_dir override; fall back to <data_dir>/rules.
         // In development, set detection.rules_dir = "intelligence/rule-packs" in the TOML config.
-        let rules_dir = cfg.detection.rules_dir.clone()
+        let rules_dir = cfg
+            .detection
+            .rules_dir
+            .clone()
             .unwrap_or_else(|| cfg.storage.data_dir.join("rules"));
         if rules_dir.exists() {
             rule_loader.load_packs(&rules_dir, &cfg.detection.rule_packs)?;
         }
-        info!(rules = rule_loader.rule_count(), "Detection engine initialized");
+        info!(
+            rules = rule_loader.rule_count(),
+            "Detection engine initialized"
+        );
 
         Ok(Self {
             receiver,
@@ -141,9 +146,12 @@ impl DetectionEngine {
             let event_type_str = event.event_type.to_string();
             // Rule files use dot-notation ("process.create"); serde produces underscore ("process_create").
             // Accept either form so legacy rule packs work without modification.
-            if !rule.match_block.event_types.iter().any(|t| {
-                t == &event_type_str || t.replace('.', "_") == event_type_str
-            }) {
+            if !rule
+                .match_block
+                .event_types
+                .iter()
+                .any(|t| t == &event_type_str || t.replace('.', "_") == event_type_str)
+            {
                 return None;
             }
         }
@@ -154,7 +162,8 @@ impl DetectionEngine {
             MatchType::Heuristic => {
                 // Lua heuristic evaluation is synchronous inside tokio — acceptable
                 // given the rule count (<100) and evaluation frequency
-                self.evaluate_heuristic_rule(compiled, event).unwrap_or(false)
+                self.evaluate_heuristic_rule(compiled, event)
+                    .unwrap_or(false)
             }
         };
 
@@ -163,7 +172,9 @@ impl DetectionEngine {
                 rule_id: rule.id.clone(),
                 rule_name: rule.name.clone(),
                 severity: parse_severity(&rule.response.severity),
-                mitre_techniques: rule.mitre.as_ref()
+                mitre_techniques: rule
+                    .mitre
+                    .as_ref()
                     .map(|m| m.techniques.clone())
                     .unwrap_or_default(),
                 details: std::collections::HashMap::new(),
@@ -196,24 +207,46 @@ impl DetectionEngine {
                 None => return false,
             };
             match condition.operator.as_str() {
-                "in" => condition.values.iter().any(|v| v.eq_ignore_ascii_case(&value)),
-                "eq" => condition.values.first().map(|v| v.eq_ignore_ascii_case(&value)).unwrap_or(false),
-                "contains" => condition.values.iter().any(|v| value.to_lowercase().contains(&v.to_lowercase())),
-                "starts_with" => condition.values.iter().any(|v| value.to_lowercase().starts_with(&v.to_lowercase())),
-                "ends_with" => condition.values.iter().any(|v| value.to_lowercase().ends_with(&v.to_lowercase())),
+                "in" => condition
+                    .values
+                    .iter()
+                    .any(|v| v.eq_ignore_ascii_case(&value)),
+                "eq" => condition
+                    .values
+                    .first()
+                    .map(|v| v.eq_ignore_ascii_case(&value))
+                    .unwrap_or(false),
+                "contains" => condition
+                    .values
+                    .iter()
+                    .any(|v| value.to_lowercase().contains(&v.to_lowercase())),
+                "starts_with" => condition
+                    .values
+                    .iter()
+                    .any(|v| value.to_lowercase().starts_with(&v.to_lowercase())),
+                "ends_with" => condition
+                    .values
+                    .iter()
+                    .any(|v| value.to_lowercase().ends_with(&v.to_lowercase())),
                 _ => false,
             }
         })
     }
 
-    fn evaluate_heuristic_rule(&self, compiled: &CompiledRule, event: &TelemetryEvent) -> Result<bool> {
+    fn evaluate_heuristic_rule(
+        &self,
+        compiled: &CompiledRule,
+        event: &TelemetryEvent,
+    ) -> Result<bool> {
         // Lua evaluation placeholder — full implementation in Phase 1
         // Will call compiled.lua_fn with (event, context{recent_events})
         Ok(false)
     }
 
     async fn dispatch_containment(&self, event: &TelemetryEvent, hit: &DetectionHit) {
-        let actions = &event.detections.iter()
+        let actions = &event
+            .detections
+            .iter()
             .find(|h| h.rule_id == hit.rule_id)
             .map(|_| vec![]) // actions come from rule.response.auto_contain in full impl
             .unwrap_or_default();

@@ -146,7 +146,8 @@ impl FilesystemCollector {
                 .into_iter()
                 .map(|p| {
                     let mut ev = self.make_event(EventType::FileDelete);
-                    ev.payload.insert("path".into(), json!(p.to_string_lossy().as_ref()));
+                    ev.payload
+                        .insert("path".into(), json!(p.to_string_lossy().as_ref()));
                     ev
                 })
                 .collect(),
@@ -166,7 +167,8 @@ impl FilesystemCollector {
     /// Build a file event with path and optional SHA-256 hash.
     fn file_event(&self, event_type: EventType, path: &Path) -> TelemetryEvent {
         let mut ev = self.make_event(event_type);
-        ev.payload.insert("path".into(), json!(path.to_string_lossy().as_ref()));
+        ev.payload
+            .insert("path".into(), json!(path.to_string_lossy().as_ref()));
 
         let ext = path
             .extension()

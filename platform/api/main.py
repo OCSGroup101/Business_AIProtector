@@ -12,7 +12,6 @@ from fastapi.responses import JSONResponse
 
 from . import pki
 from .middleware.tenant import TenantMiddleware
-from .middleware.rbac import RBACMiddleware
 from .routes import (
     admin,
     agents,
@@ -24,7 +23,7 @@ from .routes import (
     policies,
     telemetry,
 )
-from .database import engine, Base
+from .database import engine
 from .intel.feed_runner import start_feed_tasks
 import logging
 
