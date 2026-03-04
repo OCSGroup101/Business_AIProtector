@@ -26,16 +26,27 @@ fn isolate_windows() -> Result<()> {
 
     // Block all outbound traffic
     Command::new("netsh")
-        .args(["advfirewall", "set", "allprofiles", "firewallpolicy",
-               "blockinbound,blockoutbound"])
+        .args([
+            "advfirewall",
+            "set",
+            "allprofiles",
+            "firewallpolicy",
+            "blockinbound,blockoutbound",
+        ])
         .status()?;
 
     // Re-permit loopback (127.0.0.1)
     Command::new("netsh")
-        .args(["advfirewall", "firewall", "add", "rule",
-               "name=OpenClaw_IsolationPermitLoopback",
-               "dir=out", "action=allow",
-               "remoteip=127.0.0.1"])
+        .args([
+            "advfirewall",
+            "firewall",
+            "add",
+            "rule",
+            "name=OpenClaw_IsolationPermitLoopback",
+            "dir=out",
+            "action=allow",
+            "remoteip=127.0.0.1",
+        ])
         .status()?;
 
     info!("Host isolated: all traffic blocked except loopback");
@@ -49,12 +60,22 @@ pub async fn lift_isolation() -> Result<()> {
     {
         use std::process::Command;
         Command::new("netsh")
-            .args(["advfirewall", "set", "allprofiles", "firewallpolicy",
-                   "blockinbound,allowoutbound"])
+            .args([
+                "advfirewall",
+                "set",
+                "allprofiles",
+                "firewallpolicy",
+                "blockinbound,allowoutbound",
+            ])
             .status()?;
         Command::new("netsh")
-            .args(["advfirewall", "firewall", "delete", "rule",
-                   "name=OpenClaw_IsolationPermitLoopback"])
+            .args([
+                "advfirewall",
+                "firewall",
+                "delete",
+                "rule",
+                "name=OpenClaw_IsolationPermitLoopback",
+            ])
             .status()?;
         info!("Host isolation lifted");
     }

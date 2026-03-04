@@ -35,10 +35,8 @@ impl TelemetryUploader {
     ) -> Result<Self> {
         let client = build_platform_client(cfg, Duration::from_secs(60))?;
 
-        let ring_buffer = RingBuffer::open(
-            &cfg.storage.data_dir,
-            cfg.storage.ring_buffer_capacity,
-        )?;
+        let ring_buffer =
+            RingBuffer::open(&cfg.storage.data_dir, cfg.storage.ring_buffer_capacity)?;
 
         Ok(Self {
             client,
@@ -122,7 +120,8 @@ impl TelemetryUploader {
             .collect::<Vec<_>>()
             .join("\n");
 
-        let result = self.client
+        let result = self
+            .client
             .post(format!("{}/api/v1/telemetry/batch", self.platform_url))
             .header("Content-Type", "application/x-ndjson")
             .header("X-Agent-ID", &self.agent_id)

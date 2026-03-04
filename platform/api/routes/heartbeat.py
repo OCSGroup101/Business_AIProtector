@@ -1,7 +1,7 @@
 """Agent heartbeat endpoint."""
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -13,7 +13,6 @@ from ..command_queue import pop_commands
 from ..database import get_tenant_session
 from ..models.agent import Agent
 from ..models.policy import Policy
-from .. import pki
 
 # Trigger cert renewal when less than this many seconds remain
 CERT_RENEW_THRESHOLD_SECS = 86_400  # 24 hours

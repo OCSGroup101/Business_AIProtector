@@ -1,7 +1,7 @@
 // Agent state machine: Enrolling → Active → Isolated / Updating
 
 use anyhow::Result;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -69,11 +69,7 @@ impl AgentStateManager {
     pub fn transition(&self, next: AgentState) -> Result<()> {
         let current = self.current_state();
         if !is_valid_transition(&current, &next) {
-            anyhow::bail!(
-                "Invalid state transition: {} → {}",
-                current,
-                next
-            );
+            anyhow::bail!("Invalid state transition: {} → {}", current, next);
         }
         let inner = self.inner.lock().unwrap();
         set_kv(&inner.conn, "state", &next.to_string())?;
@@ -161,11 +157,9 @@ fn init_schema(conn: &Connection) -> Result<()> {
 }
 
 fn get_kv(conn: &Connection, key: &str) -> Option<String> {
-    conn.query_row(
-        "SELECT value FROM kv WHERE key = ?1",
-        params![key],
-        |row| row.get(0),
-    )
+    conn.query_row("SELECT value FROM kv WHERE key = ?1", params![key], |row| {
+        row.get(0)
+    })
     .ok()
 }
 

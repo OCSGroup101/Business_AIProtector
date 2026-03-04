@@ -48,15 +48,21 @@ impl PersistenceCollector {
 
     fn make_event(&self, event_type: EventType) -> TelemetryEvent {
         TelemetryEvent::new(
-            &self.agent_id, &self.tenant_id, "persistence",
-            event_type, &self.hostname, self.os_info.clone(),
+            &self.agent_id,
+            &self.tenant_id,
+            "persistence",
+            event_type,
+            &self.hostname,
+            self.os_info.clone(),
         )
     }
 }
 
 #[async_trait]
 impl Collector for PersistenceCollector {
-    fn name(&self) -> &'static str { "persistence" }
+    fn name(&self) -> &'static str {
+        "persistence"
+    }
 
     async fn run(self: Box<Self>, publisher: EventPublisher) -> Result<()> {
         info!("PersistenceCollector starting");
@@ -112,7 +118,10 @@ impl Collector for PersistenceCollector {
             for event_result in nrx {
                 let event = match event_result {
                     Ok(e) => e,
-                    Err(e) => { warn!("PersistenceCollector watch error: {}", e); continue; }
+                    Err(e) => {
+                        warn!("PersistenceCollector watch error: {}", e);
+                        continue;
+                    }
                 };
 
                 let kind_str: &'static str = match event.kind {
@@ -124,7 +133,9 @@ impl Collector for PersistenceCollector {
 
                 for path in event.paths {
                     // Ignore editor temp files and OS metadata
-                    if is_noise_path(&path) { continue; }
+                    if is_noise_path(&path) {
+                        continue;
+                    }
                     let _ = tx.blocking_send((path, kind_str));
                 }
             }
@@ -139,9 +150,11 @@ impl Collector for PersistenceCollector {
 
             let mechanism = classify_mechanism(&path);
             let mut event = self.make_event(event_type);
-            event.payload.insert("path".into(),      json!(path.to_string_lossy().as_ref()));
+            event
+                .payload
+                .insert("path".into(), json!(path.to_string_lossy().as_ref()));
             event.payload.insert("event_kind".into(), json!(event_kind));
-            event.payload.insert("mechanism".into(),  json!(mechanism));
+            event.payload.insert("mechanism".into(), json!(mechanism));
 
             debug!(
                 path = %path.display(),
@@ -200,10 +213,17 @@ fn is_noise_path(path: &std::path::Path) -> bool {
 /// Classify the persistence mechanism from the path for event context.
 fn classify_mechanism(path: &std::path::Path) -> &'static str {
     let s = path.to_string_lossy();
-    if s.contains("cron") { "cron" }
-    else if s.contains("systemd") { "systemd_unit" }
-    else if s.contains("init.d") { "sysvinit" }
-    else if s.contains("Tasks") { "scheduled_task" }
-    else if s.contains("Startup") { "startup_folder" }
-    else { "unknown" }
+    if s.contains("cron") {
+        "cron"
+    } else if s.contains("systemd") {
+        "systemd_unit"
+    } else if s.contains("init.d") {
+        "sysvinit"
+    } else if s.contains("Tasks") {
+        "scheduled_task"
+    } else if s.contains("Startup") {
+        "startup_folder"
+    } else {
+        "unknown"
+    }
 }

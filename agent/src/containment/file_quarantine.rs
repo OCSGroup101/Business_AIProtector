@@ -18,7 +18,8 @@ pub async fn quarantine_file(path: &str) -> Result<()> {
     let quarantine_dir = quarantine_directory()?;
     std::fs::create_dir_all(&quarantine_dir)?;
 
-    let filename = source.file_name()
+    let filename = source
+        .file_name()
         .ok_or_else(|| anyhow::anyhow!("Cannot determine filename for: {}", path))?;
     let dest = quarantine_dir.join(format!("{}.quar", filename.to_string_lossy()));
 

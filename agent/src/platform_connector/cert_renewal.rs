@@ -46,10 +46,14 @@ impl CertRenewalClient {
         let (csr_pem, key_pem) = generate_csr(&hostname)?;
 
         // Use the existing mTLS cert for the renewal request itself.
-        let client = build_platform_client_from_dir(&self.data_dir, std::time::Duration::from_secs(30))?;
+        let client =
+            build_platform_client_from_dir(&self.data_dir, std::time::Duration::from_secs(30))?;
 
         let resp = client
-            .post(format!("{}/api/v1/agents/{}/renew-cert", self.platform_url, agent_id))
+            .post(format!(
+                "{}/api/v1/agents/{}/renew-cert",
+                self.platform_url, agent_id
+            ))
             .json(&CertRenewalRequest { csr_pem })
             .send()
             .await?;

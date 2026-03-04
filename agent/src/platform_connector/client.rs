@@ -46,7 +46,10 @@ pub fn build_platform_client(cfg: &AgentConfig, timeout: Duration) -> Result<Cli
     let identity = match Identity::from_pem(&pem_bundle) {
         Ok(id) => id,
         Err(e) => {
-            warn!("mTLS identity load failed ({}); falling back to plain HTTP", e);
+            warn!(
+                "mTLS identity load failed ({}); falling back to plain HTTP",
+                e
+            );
             return Ok(Client::builder().timeout(timeout).build()?);
         }
     };
@@ -66,7 +69,10 @@ pub fn build_platform_client(cfg: &AgentConfig, timeout: Duration) -> Result<Cli
 
 /// Build a platform client using certs directly from a `certs/` subdirectory.
 /// Used by cert_renewal, which doesn't have access to AgentConfig.
-pub fn build_platform_client_from_dir(data_dir: &std::path::Path, timeout: Duration) -> Result<Client> {
+pub fn build_platform_client_from_dir(
+    data_dir: &std::path::Path,
+    timeout: Duration,
+) -> Result<Client> {
     let certs_dir = data_dir.join("certs");
     let cert_path = certs_dir.join("client.pem");
     let key_path = certs_dir.join("client.key");
@@ -82,7 +88,10 @@ pub fn build_platform_client_from_dir(data_dir: &std::path::Path, timeout: Durat
     let identity = match Identity::from_pem(&pem_bundle) {
         Ok(id) => id,
         Err(e) => {
-            warn!("mTLS identity load failed ({}); falling back to plain HTTP", e);
+            warn!(
+                "mTLS identity load failed ({}); falling back to plain HTTP",
+                e
+            );
             return Ok(Client::builder().timeout(timeout).build()?);
         }
     };

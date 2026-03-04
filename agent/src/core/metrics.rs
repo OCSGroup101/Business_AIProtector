@@ -37,9 +37,15 @@ pub fn sample() -> AgentMetrics {
         let ram_mb = (proc.memory() / 1024 / 1024) as u32;
 
         debug!(cpu = cpu_normalised, ram_mb, "Agent resource sample");
-        AgentMetrics { cpu_percent: cpu_normalised, ram_mb }
+        AgentMetrics {
+            cpu_percent: cpu_normalised,
+            ram_mb,
+        }
     } else {
         debug!("Could not find own process in sysinfo — returning zero metrics");
-        AgentMetrics { cpu_percent: 0.0, ram_mb: 0 }
+        AgentMetrics {
+            cpu_percent: 0.0,
+            ram_mb: 0,
+        }
     }
 }

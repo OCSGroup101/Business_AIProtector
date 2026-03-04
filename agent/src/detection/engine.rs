@@ -50,14 +50,19 @@ impl DetectionEngine {
         ioc_store: Arc<IocStore>,
         alert_sender: mpsc::Sender<TelemetryEvent>,
     ) -> Result<Self> {
-
         let mut rule_loader = RuleLoader::new()?;
-        let rules_dir = cfg.detection.rules_dir.clone()
+        let rules_dir = cfg
+            .detection
+            .rules_dir
+            .clone()
             .unwrap_or_else(|| cfg.storage.data_dir.join("rules"));
         if rules_dir.exists() {
             rule_loader.load_packs(&rules_dir, &cfg.detection.rule_packs)?;
         }
-        info!(rules = rule_loader.rule_count(), "Detection engine initialized");
+        info!(
+            rules = rule_loader.rule_count(),
+            "Detection engine initialized"
+        );
 
         Ok(Self {
             receiver,
@@ -158,15 +163,22 @@ impl DetectionEngine {
 
     /// Evaluate a single-event rule (IOC / behavioral / heuristic).
     /// Synchronous — none of the evaluators block or need async I/O.
-    fn evaluate_rule(&self, compiled: &CompiledRule, event: &TelemetryEvent) -> Option<DetectionHit> {
+    fn evaluate_rule(
+        &self,
+        compiled: &CompiledRule,
+        event: &TelemetryEvent,
+    ) -> Option<DetectionHit> {
         let rule = &compiled.rule;
 
         // Check event type filter
         if !rule.match_block.event_types.is_empty() {
             let event_type_str = event.event_type.to_string();
-            if !rule.match_block.event_types.iter().any(|t| {
-                t == &event_type_str || t.replace('.', "_") == event_type_str
-            }) {
+            if !rule
+                .match_block
+                .event_types
+                .iter()
+                .any(|t| t == &event_type_str || t.replace('.', "_") == event_type_str)
+            {
                 return None;
             }
         }
@@ -174,14 +186,18 @@ impl DetectionEngine {
         let matched = match rule.match_block.match_type {
             MatchType::Ioc => self.evaluate_ioc_rule(rule, event),
             MatchType::Behavioral => evaluate_behavioral_rule(rule, event),
-            MatchType::Heuristic => {
-                self.evaluate_heuristic_rule(compiled, event).unwrap_or(false)
-            }
+            MatchType::Heuristic => self
+                .evaluate_heuristic_rule(compiled, event)
+                .unwrap_or(false),
             // Sequence and Threshold are handled by the CorrelationTracker; skip here.
             MatchType::Sequence | MatchType::Threshold => return None,
         };
 
-        if matched { Some(make_detection_hit(rule)) } else { None }
+        if matched {
+            Some(make_detection_hit(rule))
+        } else {
+            None
+        }
     }
 
     fn evaluate_ioc_rule(&self, rule: &DetectionRule, event: &TelemetryEvent) -> bool {
@@ -198,7 +214,11 @@ impl DetectionEngine {
         false
     }
 
-    fn evaluate_heuristic_rule(&self, _compiled: &CompiledRule, _event: &TelemetryEvent) -> Result<bool> {
+    fn evaluate_heuristic_rule(
+        &self,
+        _compiled: &CompiledRule,
+        _event: &TelemetryEvent,
+    ) -> Result<bool> {
         // Full Lua heuristic evaluation planned for Phase 2 milestone 2.
         // Will call compiled.lua_fn with (event, context{recent_events}).
         Ok(false)
@@ -207,7 +227,9 @@ impl DetectionEngine {
     async fn dispatch_containment(&self, event: &TelemetryEvent, hit: &DetectionHit) {
         // Look up the containment actions from the rule definition
         let rules = self.rule_loader.read().await;
-        let auto_contain = rules.rules.get(&hit.rule_id)
+        let auto_contain = rules
+            .rules
+            .get(&hit.rule_id)
             .map(|c| c.rule.response.auto_contain.as_slice())
             .unwrap_or(&[]);
 
@@ -227,7 +249,9 @@ fn make_detection_hit(rule: &DetectionRule) -> DetectionHit {
         rule_id: rule.id.clone(),
         rule_name: rule.name.clone(),
         severity: parse_severity(&rule.response.severity),
-        mitre_techniques: rule.mitre.as_ref()
+        mitre_techniques: rule
+            .mitre
+            .as_ref()
             .map(|m| m.techniques.clone())
             .unwrap_or_default(),
         details: std::collections::HashMap::new(),
@@ -242,11 +266,27 @@ fn evaluate_behavioral_rule(rule: &DetectionRule, event: &TelemetryEvent) -> boo
             None => return false,
         };
         match condition.operator.as_str() {
-            "in" => condition.values.iter().any(|v| v.eq_ignore_ascii_case(&value)),
-            "eq" => condition.values.first().map(|v| v.eq_ignore_ascii_case(&value)).unwrap_or(false),
-            "contains" => condition.values.iter().any(|v| value.to_lowercase().contains(&v.to_lowercase())),
-            "starts_with" => condition.values.iter().any(|v| value.to_lowercase().starts_with(&v.to_lowercase())),
-            "ends_with" => condition.values.iter().any(|v| value.to_lowercase().ends_with(&v.to_lowercase())),
+            "in" => condition
+                .values
+                .iter()
+                .any(|v| v.eq_ignore_ascii_case(&value)),
+            "eq" => condition
+                .values
+                .first()
+                .map(|v| v.eq_ignore_ascii_case(&value))
+                .unwrap_or(false),
+            "contains" => condition
+                .values
+                .iter()
+                .any(|v| value.to_lowercase().contains(&v.to_lowercase())),
+            "starts_with" => condition
+                .values
+                .iter()
+                .any(|v| value.to_lowercase().starts_with(&v.to_lowercase())),
+            "ends_with" => condition
+                .values
+                .iter()
+                .any(|v| value.to_lowercase().ends_with(&v.to_lowercase())),
             _ => false,
         }
     })

@@ -42,15 +42,21 @@ impl AuthCollector {
 
     fn make_event(&self, event_type: EventType) -> TelemetryEvent {
         TelemetryEvent::new(
-            &self.agent_id, &self.tenant_id, "auth",
-            event_type, &self.hostname, self.os_info.clone(),
+            &self.agent_id,
+            &self.tenant_id,
+            "auth",
+            event_type,
+            &self.hostname,
+            self.os_info.clone(),
         )
     }
 }
 
 #[async_trait]
 impl Collector for AuthCollector {
-    fn name(&self) -> &'static str { "auth" }
+    fn name(&self) -> &'static str {
+        "auth"
+    }
 
     async fn run(self: Box<Self>, publisher: EventPublisher) -> Result<()> {
         info!(event_ids = ?self.event_ids, "AuthCollector starting");
@@ -116,7 +122,10 @@ mod linux {
             let (tx, rx) = std::sync::mpsc::channel::<notify::Result<notify::Event>>();
             let mut watcher = match RecommendedWatcher::new(tx, Config::default()) {
                 Ok(w) => w,
-                Err(e) => { warn!("AuthCollector: watcher init failed: {}", e); return; }
+                Err(e) => {
+                    warn!("AuthCollector: watcher init failed: {}", e);
+                    return;
+                }
             };
             let _ = watcher.watch(
                 std::path::Path::new(&log_path_owned),
@@ -125,7 +134,9 @@ mod linux {
             for event in rx.into_iter().flatten() {
                 if matches!(event.kind, EventKind::Modify(_)) {
                     // Signal the async reader that new data may be available
-                    if ntx.blocking_send(()).is_err() { break; }
+                    if ntx.blocking_send(()).is_err() {
+                        break;
+                    }
                 }
             }
         });
@@ -161,11 +172,7 @@ mod linux {
     }
 
     /// Parse a single syslog auth line and emit the appropriate TelemetryEvent.
-    fn parse_and_publish(
-        collector: &AuthCollector,
-        publisher: &EventPublisher,
-        line: &str,
-    ) {
+    fn parse_and_publish(collector: &AuthCollector, publisher: &EventPublisher, line: &str) {
         let (event_type, user, src_ip, details) = classify_line(line);
 
         let event_type = match event_type {
@@ -240,7 +247,11 @@ mod linux {
             .find(|c: char| c.is_whitespace() || c == ',' || c == ';')
             .unwrap_or(rest.len());
         let token = rest[..end].trim_matches(|c: char| c == '\'' || c == '"');
-        if token.is_empty() { None } else { Some(token.to_string()) }
+        if token.is_empty() {
+            None
+        } else {
+            Some(token.to_string())
+        }
     }
 }
 
