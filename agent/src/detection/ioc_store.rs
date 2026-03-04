@@ -6,7 +6,9 @@
 // IOC types: file_hash (SHA-256), ip_address, domain, url
 
 use anyhow::Result;
-use lmdb_rkv::{Database, DatabaseFlags, Environment, EnvironmentFlags, Transaction, WriteFlags};
+use lmdb::{
+    Database, DatabaseFlags, Environment, EnvironmentFlags, RoTransaction, Transaction, WriteFlags,
+};
 use std::path::Path;
 use tracing::{debug, info};
 
@@ -28,7 +30,8 @@ impl IocStore {
 
         let db = {
             let mut txn = env.begin_rw_txn()?;
-            let db = txn.open_db(Some("iocs"), DatabaseFlags::empty())?;
+            // SAFETY: No concurrent transactions are open at this point; called once during init.
+            let db = unsafe { txn.create_db(Some("iocs"), DatabaseFlags::empty()) }?;
             txn.commit()?;
             db
         };
@@ -41,13 +44,13 @@ impl IocStore {
     /// Key format: `{ioc_type}:{value}`, e.g. `file_hash:abc123...`
     pub fn contains(&self, ioc_type: &str, value: &str) -> bool {
         let key = format!("{}:{}", ioc_type, value.to_lowercase());
-        let txn = match self.env.begin_ro_txn() {
+        let txn: RoTransaction<'_> = match self.env.begin_ro_txn() {
             Ok(t) => t,
             Err(_) => return false,
         };
         match txn.get(self.db, &key.as_bytes()) {
             Ok(_) => true,
-            Err(lmdb_rkv::Error::NotFound) => false,
+            Err(lmdb::Error::NotFound) => false,
             Err(e) => {
                 debug!(error = %e, key = %key, "IOC lookup error");
                 false
@@ -101,19 +104,18 @@ impl IocStore {
                 txn.commit()?;
                 Ok(true)
             }
-            Err(lmdb_rkv::Error::NotFound) => Ok(false),
-            Err(e) => Err(e.into()),
+            Err(lmdb::Error::NotFound) => Ok(false),
+            Err(e) => Err(anyhow::anyhow!(e)),
         }
     }
 
     pub fn count(&self) -> usize {
-        let txn = match self.env.begin_ro_txn() {
+        let txn: RoTransaction<'_> = match self.env.begin_ro_txn() {
             Ok(t) => t,
             Err(_) => return 0,
         };
-        txn.open_db(Some("iocs"))
-            .and_then(|db| txn.stat(db))
-            .map(|stat| stat.entries())
+        txn.stat(self.db)
+            .map(|stat: lmdb::Stat| stat.entries())
             .unwrap_or(0)
     }
 }

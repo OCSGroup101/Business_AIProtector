@@ -566,13 +566,13 @@ async fn run_stub(collector: ProcessCollector, publisher: EventPublisher) -> Res
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-fn hostname() -> String {
+pub(crate) fn hostname() -> String {
     std::env::var("COMPUTERNAME")
         .or_else(|_| std::env::var("HOSTNAME"))
         .unwrap_or_else(|_| "unknown".to_string())
 }
 
-fn current_os_info() -> OsInfo {
+pub(crate) fn current_os_info() -> OsInfo {
     OsInfo {
         platform: std::env::consts::OS.to_string(),
         version: os_version(),
