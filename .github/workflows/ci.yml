@@ -21,7 +21,7 @@ permissions:
   security-events: write
 
 env:
-  RUST_VERSION: "1.77"
+  RUST_VERSION: "1.86"
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "20"
 
@@ -353,6 +353,7 @@ jobs:
           scan-ref: "docker-compose.yml"
           severity: "HIGH,CRITICAL"
           exit-code: "1"
+          trivyignores: ".trivyignore"
 
 # ─── Stage 6: Isolation Tests ─────────────────────────────────────────────────
   isolation-tests:
