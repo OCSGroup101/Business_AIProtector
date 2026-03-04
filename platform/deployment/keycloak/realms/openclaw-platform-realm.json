@@ -1,0 +1,46 @@
+{
+  "realm": "openclaw-platform",
+  "enabled": true,
+  "displayName": "OpenClaw Platform",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "clients": [
+    {
+      "clientId": "openclaw-console",
+      "name": "OpenClaw Management Console",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": ["http://localhost:3000/*", "https://*.openclaw.example.com/*"],
+      "webOrigins": ["http://localhost:3000", "https://*.openclaw.example.com"],
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "openclaw-platform-api",
+      "name": "OpenClaw Platform API",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "tenant_admin", "description": "Full tenant administration" },
+      { "name": "security_admin", "description": "Security operations" },
+      { "name": "helpdesk", "description": "Helpdesk and agent visibility" },
+      { "name": "auditor", "description": "Read-only audit access" }
+    ]
+  },
+  "defaultRoles": []
+}

@@ -1,0 +1,13 @@
+# OpenClaw Core Rule Pack v1
+# Covers 40 Phase 1 detection rules across 12 MITRE tactics.
+# Signed with minisign Ed25519.
+
+[pack]
+name = "openclaw-core-v1"
+version = "1.0.0"
+author = "Omni Cyber Solutions LLC"
+description = "Core detection rules covering Phase 1 MITRE ATT&CK techniques"
+license = "Apache-2.0"
+min_agent_version = "0.1.0"
+signature = ""  # Populated by CI signing step
+sha256 = ""     # Populated by CI signing step

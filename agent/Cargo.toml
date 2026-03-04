@@ -1,0 +1,133 @@
+[workspace]
+members = ["."]
+resolver = "2"
+
+[package]
+name = "openclaw-agent"
+version = "0.1.0"
+edition = "2021"
+authors = ["Omni Cyber Solutions LLC <dev@omnicybersolutions.com>"]
+license = "Apache-2.0"
+description = "OpenClaw endpoint security agent"
+repository = "https://github.com/omni-cyber-solutions/openclaw"
+rust-version = "1.77"
+
+[[bin]]
+name = "openclaw-agent"
+path = "src/main.rs"
+
+[features]
+default = []
+# Enable whisper.cpp speech-to-text (opt-in, 39MB download)
+stt = ["dep:whisper-rs"]
+# Enable Windows-specific ETW/WFP APIs
+windows-etw = []
+# Enable macOS Endpoint Security Framework
+macos-esf = []
+# Enable Linux eBPF collectors
+linux-ebpf = ["dep:aya", "dep:aya-log"]
+
+[dependencies]
+# ─── Async runtime ────────────────────────────────────────────────────────────
+tokio = { version = "1.37", features = ["full"] }
+tokio-util = { version = "0.7", features = ["full"] }
+
+# ─── Serialization ────────────────────────────────────────────────────────────
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# ─── Logging / Tracing ────────────────────────────────────────────────────────
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+
+# ─── HTTP client (platform connector) ────────────────────────────────────────
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"], default-features = false }
+
+# ─── Local storage ────────────────────────────────────────────────────────────
+rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
+lmdb-rkv = "0.14"
+
+# ─── Embedded Lua (rule engine) ───────────────────────────────────────────────
+mlua = { version = "0.9", features = ["lua54", "vendored", "async", "serialize"] }
+
+# ─── Configuration ────────────────────────────────────────────────────────────
+config = { version = "0.14", features = ["toml"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# ─── Cryptography (update verification) ──────────────────────────────────────
+ring = "0.17"
+base64 = "0.22"
+sha2 = "0.10"
+hex = "0.4"
+
+# ─── Time ─────────────────────────────────────────────────────────────────────
+chrono = { version = "0.4", features = ["serde"] }
+
+# ─── IDs ──────────────────────────────────────────────────────────────────────
+ulid = { version = "1.1", features = ["serde"] }
+
+# ─── Async trait ─────────────────────────────────────────────────────────────
+async-trait = "0.1"
+futures = "0.3"
+
+# ─── Error handling ───────────────────────────────────────────────────────────
+anyhow = "1.0"
+thiserror = "1.0"
+
+# ─── Certificate / CSR generation (enrollment) ───────────────────────────────
+rcgen = "0.12"
+
+# ─── Platform-specific ────────────────────────────────────────────────────────
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.57", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Diagnostics_Etw",
+    "Win32_System_Threading",
+    "Win32_Storage_FileSystem",
+    "Win32_NetworkManagement_WindowsFilteringPlatform",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Media_Speech",
+] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+aya = { version = "0.12", optional = true }
+aya-log = { version = "0.2", optional = true }
+
+# ─── Optional (feature-gated) ─────────────────────────────────────────────────
+whisper-rs = { version = "0.11", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.10"
+tokio-test = "0.4"
+mockall = "0.12"
+
+[[bench]]
+name = "detection_engine"
+harness = false
+
+[[bench]]
+name = "ioc_lookup"
+harness = false
+
+[[bench]]
+name = "event_throughput"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.bench]
+opt-level = 3
+lto = "thin"

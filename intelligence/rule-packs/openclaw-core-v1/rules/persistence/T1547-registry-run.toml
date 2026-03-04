@@ -1,0 +1,66 @@
+# T1547.001 — Boot or Logon Autostart: Registry Run Keys / Startup Folder
+
+[[rules]]
+id = "OC-BEH-0010"
+name = "Registry Run Key Modification"
+enabled = true
+description = """
+Detects modifications to common autostart registry keys. Malware frequently
+uses Run/RunOnce keys to persist across reboots.
+"""
+
+[rules.mitre]
+tactics = ["TA0003"]
+techniques = ["T1547.001"]
+
+[rules.match]
+type = "behavioral"
+event_types = ["persistence.create", "persistence.modify"]
+
+[[rules.match.conditions]]
+field = "payload.registry_key"
+operator = "contains"
+values = [
+    "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+    "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
+    "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run",
+    "SYSTEM\\CurrentControlSet\\Services",
+]
+
+[rules.response]
+severity = "HIGH"
+auto_contain = ["disable_persistence"]
+notify = true
+
+
+[[rules]]
+id = "OC-BEH-0011"
+name = "Scheduled Task Created by Non-Admin Process"
+enabled = true
+description = """
+Detects scheduled task creation from non-administrative processes.
+Legitimate applications rarely create scheduled tasks from user-space processes.
+"""
+
+[rules.mitre]
+tactics = ["TA0003"]
+techniques = ["T1053.005"]
+
+[rules.match]
+type = "behavioral"
+event_types = ["persistence.create"]
+
+[[rules.match.conditions]]
+field = "payload.persistence_type"
+operator = "eq"
+values = ["scheduled_task"]
+
+[[rules.match.conditions]]
+field = "payload.creator_elevated"
+operator = "eq"
+values = ["false"]
+
+[rules.response]
+severity = "MEDIUM"
+auto_contain = []
+notify = true

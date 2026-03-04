@@ -1,0 +1,107 @@
+name: Bug Report
+description: Report a defect in any OpenClaw component
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please complete all sections to help us triage quickly.
+        **Do NOT use this form for security vulnerabilities.** Use GitHub Security Advisory instead.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which component is affected?
+      options:
+        - Agent (Rust)
+        - Platform API (FastAPI)
+        - Console (Next.js)
+        - Threat Intelligence Pipeline
+        - CI/CD Infrastructure
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is the impact?
+      options:
+        - "Critical — data loss, security breach, or service down"
+        - "High — major functionality broken, no workaround"
+        - "Medium — functionality degraded, workaround exists"
+        - "Low — minor issue, cosmetic, or edge case"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System (if agent-related)
+      options:
+        - Windows x86_64
+        - Windows ARM64
+        - Linux x86_64
+        - Linux ARM64
+        - Not applicable
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenClaw Version
+      description: Run `openclaw-agent --version` or check your deployment tag
+      placeholder: "e.g., v0.1.0-alpha or commit SHA"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to trigger the bug
+      placeholder: |
+        1. Start the agent with `...`
+        2. Send event `...`
+        3. Observe `...`
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What happened instead? Include error messages and logs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Paste relevant log output (redact any sensitive data)
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: This is NOT a security vulnerability (those go to GitHub Security Advisory)
+          required: true
+        - label: I have redacted any sensitive data from logs
+          required: true

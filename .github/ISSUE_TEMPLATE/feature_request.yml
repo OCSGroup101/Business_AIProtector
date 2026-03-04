@@ -1,0 +1,93 @@
+name: Feature Request
+description: Propose a new capability or enhancement for OpenClaw
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, check the [ROADMAP.md](../ROADMAP.md) to see if this is already planned.
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Suggested Phase Alignment
+      description: Which phase does this feature belong in?
+      options:
+        - "Phase 1 (Weeks 5–16): Core telemetry and IOC detection"
+        - "Phase 2 (Weeks 17–32): Behavioral detection and response"
+        - "Phase 3 (Weeks 33–52): Threat hunting and ML heuristics"
+        - "Phase 4 (Weeks 53–72): Enterprise and compliance"
+        - "Unplanned / unknown"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      options:
+        - Agent (Rust)
+        - Platform API (FastAPI)
+        - Console (Next.js)
+        - Detection Rules
+        - Threat Intelligence Pipeline
+        - Infrastructure / DevOps
+        - Documentation
+        - Multiple components
+    validations:
+      required: true
+
+  - type: input
+    id: mitre
+    attributes:
+      label: MITRE ATT&CK Technique (if applicable)
+      description: e.g., T1059.001 — PowerShell
+      placeholder: "T1234 or T1234.001, or leave blank if not applicable"
+
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User Story
+      description: Who benefits and how?
+      placeholder: |
+        As a [security analyst / admin / ...],
+        I want to [capability],
+        so that [benefit / outcome].
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Being Solved
+      description: What gap or pain point does this address?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know this feature is complete?
+      placeholder: |
+        - [ ] Given X, when Y, then Z
+        - [ ] Performance: [specific metric]
+        - [ ] Security: [any isolation or auth requirements]
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches did you consider?
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I checked ROADMAP.md and this is not already planned
+          required: true

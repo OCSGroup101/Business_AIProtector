@@ -1,0 +1,99 @@
+# T1059 — Command and Scripting Interpreter
+# Detects Office documents spawning command shells (common phishing/macro technique)
+
+[[rules]]
+id = "OC-BEH-0001"
+name = "Office Document Spawning Command Shell"
+enabled = true
+description = """
+Detects Office applications (Word, Excel, PowerPoint) launching command interpreters.
+This is a common indicator of malicious macro execution or phishing-delivered malware.
+"""
+
+[rules.mitre]
+tactics = ["TA0002"]
+techniques = ["T1059.001", "T1059.003", "T1204.002"]
+
+[rules.match]
+type = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field = "payload.parent_name"
+operator = "in"
+values = ["winword.exe", "excel.exe", "powerpnt.exe", "msaccess.exe", "outlook.exe", "onenote.exe"]
+
+[[rules.match.conditions]]
+field = "payload.process_name"
+operator = "in"
+values = ["cmd.exe", "powershell.exe", "pwsh.exe", "wscript.exe", "cscript.exe", "mshta.exe", "rundll32.exe"]
+
+[rules.response]
+severity = "HIGH"
+auto_contain = ["terminate_process"]
+notify = true
+tts = true
+
+
+[[rules]]
+id = "OC-BEH-0002"
+name = "PowerShell with Encoded Command"
+enabled = true
+description = """
+Detects PowerShell launched with -EncodedCommand or -enc flags, commonly used
+to obfuscate malicious scripts. High false positive rate in enterprise environments
+with legitimate automation — tune allowlist as needed.
+"""
+
+[rules.mitre]
+tactics = ["TA0002", "TA0005"]
+techniques = ["T1059.001", "T1027"]
+
+[rules.match]
+type = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field = "payload.process_name"
+operator = "in"
+values = ["powershell.exe", "pwsh.exe"]
+
+[[rules.match.conditions]]
+field = "payload.cmdline"
+operator = "contains"
+values = ["-EncodedCommand", "-enc ", "-e "]
+
+[rules.response]
+severity = "MEDIUM"
+auto_contain = []
+notify = true
+
+
+[[rules]]
+id = "OC-BEH-0003"
+name = "WMIC Process Create"
+enabled = true
+description = "Detects WMIC used to spawn processes — commonly used for lateral movement and execution."
+
+[rules.mitre]
+tactics = ["TA0002"]
+techniques = ["T1047"]
+
+[rules.match]
+type = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field = "payload.process_name"
+operator = "eq"
+values = ["wmic.exe"]
+
+[[rules.match.conditions]]
+field = "payload.cmdline"
+operator = "contains"
+values = ["process call create", "process create"]
+
+[rules.response]
+severity = "MEDIUM"
+auto_contain = []
+notify = true

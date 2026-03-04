@@ -1,0 +1,24 @@
+{
+  "realm": "openclaw-agents",
+  "enabled": true,
+  "displayName": "OpenClaw Agent Identity",
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "bruteForceProtected": true,
+  "clients": [
+    {
+      "clientId": "openclaw-agent",
+      "name": "OpenClaw Agent",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "use.refresh.tokens": "false",
+        "client_credentials.use_refresh_token": "false"
+      }
+    }
+  ]
+}

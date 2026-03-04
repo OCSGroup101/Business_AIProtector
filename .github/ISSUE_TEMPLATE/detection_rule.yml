@@ -1,0 +1,118 @@
+name: Detection Rule Submission
+description: Propose a new or updated IOC, Behavioral, or Heuristic detection rule
+labels: ["detection-rule", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to submit new detection rules or updates to existing rules.
+        Rules must include a test event (must match) and a benign event (must NOT match).
+        See [Rule Authoring Guide](../docs/rules/rule-authoring-guide.md) for format details.
+
+  - type: input
+    id: rule_id
+    attributes:
+      label: Rule ID
+      description: "Use format: OC-IOC-XXXX, OC-BEH-XXXX, or OC-HEU-XXXX. Leave blank for new rules (assigned by Detection Engineering)."
+      placeholder: "e.g., OC-BEH-0042"
+
+  - type: input
+    id: rule_name
+    attributes:
+      label: Rule Name
+      placeholder: "e.g., Suspicious Child Process from Office Application"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rule_type
+    attributes:
+      label: Rule Type
+      options:
+        - IOC — Hash / IP / Domain / URL match (OC-IOC-XXXX)
+        - Behavioral — Event sequence match (OC-BEH-XXXX)
+        - Heuristic — Lua scoring function (OC-HEU-XXXX)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+        - Informational
+    validations:
+      required: true
+
+  - type: input
+    id: mitre
+    attributes:
+      label: MITRE ATT&CK Technique(s)
+      placeholder: "e.g., T1566.001, T1059.001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: rule_content
+    attributes:
+      label: Rule Content (YAML or Lua)
+      description: Paste the complete rule definition
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_event_match
+    attributes:
+      label: Test Event — Must MATCH (JSON)
+      description: A synthetic event that this rule should fire on. Used in automated testing.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_event_benign
+    attributes:
+      label: Test Event — Must NOT Match (JSON)
+      description: A benign event that must NOT trigger this rule. Used to validate no false positives on common activity.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: false_positive
+    attributes:
+      label: False Positive Assessment
+      description: |
+        What legitimate activity might trigger this rule?
+        What is your estimated false positive rate in a typical enterprise environment?
+    validations:
+      required: true
+
+  - type: textarea
+    id: threat_context
+    attributes:
+      label: Threat Context
+      description: What threat actor, malware family, or campaign motivated this rule? Include any references.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Submission Checklist
+      options:
+        - label: Rule ID format follows OC-{TYPE}-XXXX convention
+          required: true
+        - label: MITRE ATT&CK technique is correctly mapped
+          required: true
+        - label: Test event (match) provided and validated locally
+          required: true
+        - label: Benign event (no-match) provided
+          required: true
+        - label: False positive assessment completed
+          required: true
+        - label: Apache 2.0 license header included in rule file
+          required: true

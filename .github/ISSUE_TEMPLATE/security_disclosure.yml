@@ -1,0 +1,56 @@
+name: Security Vulnerability Disclosure
+description: Report a security vulnerability — READ CAREFULLY before proceeding
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # STOP — Do NOT submit security vulnerabilities here
+
+        **This public issue form is NOT for security vulnerabilities.**
+
+        Submitting vulnerability details in a public GitHub issue exposes all OpenClaw users to harm before a fix is available.
+
+        ## How to report a security vulnerability
+
+        ### Option 1 (Preferred): GitHub Security Advisory
+        Use GitHub's private vulnerability reporting:
+        1. Go to the **Security** tab of this repository
+        2. Click **Report a vulnerability**
+        3. Fill in the private advisory form
+
+        This creates a private discussion visible only to maintainers.
+
+        ### Option 2: Email
+        Send details to: **conduct@omnicybersolutions.com**
+        - Subject: `[SECURITY] Brief description`
+        - Include: affected component, reproduction steps, impact assessment
+        - PGP key available on request
+
+        ## Response SLA (from [SECURITY.md](../SECURITY.md))
+        | Severity | Acknowledge | Fix Target |
+        |---|---|---|
+        | Critical | 48 hours | 7 days |
+        | High | 48 hours | 30 days |
+        | Medium | 72 hours | 60 days |
+        | Low | 1 week | 90 days |
+
+        ## If you still want to proceed with a public issue
+
+        Only use this form if you are certain the issue is **not a security vulnerability** — for example, a documentation gap in security-related docs, or a question about the security architecture.
+
+  - type: checkboxes
+    id: confirm_not_vuln
+    attributes:
+      label: Confirmation
+      options:
+        - label: I confirm this is NOT an exploitable security vulnerability. It is a documentation or process question only.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Non-vulnerability security question or documentation gap
+      description: Describe your question or the documentation gap
+    validations:
+      required: true

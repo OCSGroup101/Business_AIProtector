@@ -1,0 +1,80 @@
+# T1566.001 — Phishing: Spearphishing Attachment
+
+[[rules]]
+id = "OC-IOC-0001"
+name = "Known Malicious File Hash"
+enabled = true
+description = """
+Matches file SHA-256 hash against the LMDB IOC store populated from
+MalwareBazaar, VirusTotal, and other threat intelligence feeds.
+"""
+
+[rules.mitre]
+tactics = ["TA0001"]
+techniques = ["T1566.001"]
+
+[rules.match]
+type = "ioc"
+event_types = ["file.create", "file.modify", "process.create"]
+
+[[rules.match.conditions]]
+field = "payload.hash_sha256"
+operator = "in_ioc_set"
+ioc_type = "file_hash"
+
+[rules.response]
+severity = "CRITICAL"
+auto_contain = ["quarantine_file", "terminate_process"]
+notify = true
+tts = true
+
+
+[[rules]]
+id = "OC-IOC-0002"
+name = "Known Malicious IP Connection"
+enabled = true
+description = "Detects outbound connections to known C2 or malicious IP addresses."
+
+[rules.mitre]
+tactics = ["TA0011"]
+techniques = ["T1071.001"]
+
+[rules.match]
+type = "ioc"
+event_types = ["network.connect"]
+
+[[rules.match.conditions]]
+field = "payload.dst_ip"
+operator = "in_ioc_set"
+ioc_type = "ip_address"
+
+[rules.response]
+severity = "CRITICAL"
+auto_contain = ["block_network", "terminate_process"]
+notify = true
+tts = true
+
+
+[[rules]]
+id = "OC-IOC-0003"
+name = "Known Malicious Domain DNS Query"
+enabled = true
+description = "Detects DNS queries for known malicious domains (C2, phishing, malware distribution)."
+
+[rules.mitre]
+tactics = ["TA0011"]
+techniques = ["T1071.001", "T1048.003"]
+
+[rules.match]
+type = "ioc"
+event_types = ["network.dns_query"]
+
+[[rules.match.conditions]]
+field = "payload.query_name"
+operator = "in_ioc_set"
+ioc_type = "domain"
+
+[rules.response]
+severity = "HIGH"
+auto_contain = ["block_network"]
+notify = true
