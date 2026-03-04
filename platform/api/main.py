@@ -14,6 +14,7 @@ from . import pki
 from .middleware.tenant import TenantMiddleware
 from .middleware.rbac import RBACMiddleware
 from .routes import (
+    admin,
     agents,
     audit,
     enrollment,
@@ -80,6 +81,7 @@ app.add_middleware(TenantMiddleware)
 
 # ─── Routers ─────────────────────────────────────────────────────────────────
 
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(enrollment.router, prefix="/api/v1/agents", tags=["enrollment"])
 app.include_router(heartbeat.router, prefix="/api/v1/agents", tags=["heartbeat"])
 app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetry"])

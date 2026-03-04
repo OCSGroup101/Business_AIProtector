@@ -46,8 +46,10 @@ impl DetectionEngine {
     ) -> Result<Self> {
 
         let mut rule_loader = RuleLoader::new()?;
-        // Rules will be loaded from policy sync; for now load from bundled path if present
-        let rules_dir = cfg.storage.data_dir.join("rules");
+        // Prefer explicit rules_dir override; fall back to <data_dir>/rules.
+        // In development, set detection.rules_dir = "intelligence/rule-packs" in the TOML config.
+        let rules_dir = cfg.detection.rules_dir.clone()
+            .unwrap_or_else(|| cfg.storage.data_dir.join("rules"));
         if rules_dir.exists() {
             rule_loader.load_packs(&rules_dir, &cfg.detection.rule_packs)?;
         }
@@ -137,7 +139,11 @@ impl DetectionEngine {
         // Check event type filter
         if !rule.match_block.event_types.is_empty() {
             let event_type_str = event.event_type.to_string();
-            if !rule.match_block.event_types.iter().any(|t| t == &event_type_str) {
+            // Rule files use dot-notation ("process.create"); serde produces underscore ("process_create").
+            // Accept either form so legacy rule packs work without modification.
+            if !rule.match_block.event_types.iter().any(|t| {
+                t == &event_type_str || t.replace('.', "_") == event_type_str
+            }) {
                 return None;
             }
         }

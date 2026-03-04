@@ -5,6 +5,7 @@ Roles: tenant_admin | security_admin | helpdesk | auditor
 Permission enforcement via FastAPI dependencies.
 """
 
+import os
 from enum import Enum
 from functools import wraps
 from typing import Callable, Optional
@@ -79,7 +80,13 @@ def get_current_user_role(request: Request) -> Role:
     """
     Extract the user's role from the JWT claim.
     In production this is validated by Kong; here we decode from request state.
+
+    Dev bypass: set OPENCLAW_DEV_MODE=true to skip auth and grant tenant_admin.
+    Never enable this in production.
     """
+    if os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
+        return Role.TENANT_ADMIN
+
     role_str = getattr(request.state, "user_role", None)
     if role_str is None:
         # Try to extract from JWT

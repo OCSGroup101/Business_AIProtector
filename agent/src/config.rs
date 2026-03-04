@@ -117,6 +117,11 @@ pub struct DetectionConfig {
     #[serde(default = "default_rule_packs")]
     pub rule_packs: Vec<String>,
 
+    /// Override the directory that contains rule-pack subdirectories.
+    /// Defaults to <data_dir>/rules if not set.
+    /// In development, point this at intelligence/rule-packs/ in the repo root.
+    pub rules_dir: Option<PathBuf>,
+
     /// Detection sensitivity: conservative | balanced | aggressive
     #[serde(default = "default_sensitivity")]
     pub sensitivity: String,
@@ -261,6 +266,7 @@ rule_packs             = ["openclaw-core-v1"]
 sensitivity            = "balanced"
 auto_contain_max_severity = "HIGH"
 require_approval_for_isolation = true
+# rules_dir = "intelligence/rule-packs"  # dev: override default <data_dir>/rules path
 
 [assistant]
 enabled          = true
