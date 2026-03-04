@@ -32,7 +32,7 @@ export default function AuditPage() {
     queryKey: ["audit", page, outcomeFilter],
     queryFn: () =>
       apiClient
-        .get("/api/v1/audit/logs", {
+        .get("/api/v1/audit", {
           params: {
             offset: page * PAGE_SIZE,
             limit: PAGE_SIZE,
