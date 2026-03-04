@@ -1,0 +1,52 @@
+# OpenClaw Agent — Development Configuration
+# Use this config when running the agent locally against a dev platform stack.
+#
+#   cargo run -- --config openclaw-agent.dev.toml
+#
+# Requirements:
+#   1. make dev-init          (start stack, run migrations, provision dev tenant)
+#   2. make dev-enroll-token  (create a one-time enrollment token)
+#   3. cargo run -- --enroll <TOKEN> --config openclaw-agent.dev.toml
+#   4. cargo run -- --config openclaw-agent.dev.toml
+
+log_level = "debug"
+log_format = "text"
+
+[platform]
+url = "http://localhost:8000"
+# No mTLS in dev — platform accepts plain HTTP for enrollment.
+# client_cert and client_key are set automatically after --enroll.
+heartbeat_interval_secs        = 30
+telemetry_upload_interval_secs = 60
+buffer_upload_threshold_pct    = 25
+ioc_poll_interval_secs         = 120
+
+[storage]
+# Writes SQLite ring buffer and LMDB IOC store to a local dev directory.
+data_dir              = ".openclaw-dev-data"
+ring_buffer_capacity  = 10000
+
+[collectors]
+process_enabled     = true
+filesystem_enabled  = true
+filesystem_watch_paths = ["/tmp", "/var/tmp"]
+network_enabled     = true
+network_capture_dns = true
+persistence_enabled = true
+auth_enabled        = true
+integrity_enabled   = false   # disabled in dev to reduce noise
+
+[detection]
+rule_packs                     = ["openclaw-core-v1"]
+# Point directly at the repo rule packs — no need to copy files.
+rules_dir                      = "intelligence/rule-packs"
+sensitivity                    = "balanced"
+auto_contain_max_severity      = "NONE"   # no auto-contain in dev
+require_approval_for_isolation = true
+
+[assistant]
+enabled          = false   # set to true and add ANTHROPIC_API_KEY to enable
+tts_enabled      = false
+tts_min_severity = "HIGH"
+stt_enabled      = false
+# anthropic_api_key = ""  # or set ANTHROPIC_API_KEY env var

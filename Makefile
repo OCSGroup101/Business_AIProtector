@@ -28,16 +28,34 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(CYAN)%-24s$(RESET) %s\n", $$1, $$2}'
 
 # ─── Dev Stack ────────────────────────────────────────────────────────────
-dev-up: ## Start the full development stack
+dev-up: ## Start the full development stack (infra only — API and console run separately)
 	@echo -e "$(GREEN)Starting OpenClaw dev stack...$(RESET)"
 	@test -f .env || cp .env.example .env
 	docker compose up -d
-	@echo -e "$(GREEN)Dev stack ready:$(RESET)"
-	@echo -e "  Console:    http://localhost:3000"
-	@echo -e "  API:        http://localhost:8888"
+	@echo -e "$(GREEN)Infra ready. Next steps:$(RESET)"
+	@echo -e "  1.  make dev-init          (first time only — migrate DB + seed dev tenant)"
+	@echo -e "  2a. cd platform/api && uvicorn main:app --reload --port 8000"
+	@echo -e "  2b. cd console && npm run dev"
+	@echo -e ""
 	@echo -e "  Keycloak:   http://localhost:8080  (admin/keycloak_admin_dev)"
 	@echo -e "  MinIO:      http://localhost:9001  (openclaw_minio/openclaw_minio_dev)"
 	@echo -e "  Kong Admin: http://localhost:8001"
+
+dev-init: ## First-time setup: wait for PG, migrate DB, seed dev tenant
+	@echo -e "$(YELLOW)Waiting for PostgreSQL to accept connections...$(RESET)"
+	@for i in $$(seq 1 30); do \
+		docker compose exec -T postgres pg_isready -U openclaw -d openclaw -q && break; \
+		echo "  Waiting... ($$i/30)"; \
+		sleep 2; \
+	done
+	@echo -e "$(YELLOW)Running Alembic migrations...$(RESET)"
+	cd $(PLATFORM_DIR) && alembic upgrade head
+	@echo -e "$(YELLOW)Seeding dev tenant and enrollment token...$(RESET)"
+	cd $(PROJECT_ROOT) && python scripts/dev_seed.py
+	@echo -e "$(GREEN)Dev environment ready.$(RESET)"
+
+dev-seed: ## Re-run the dev seed (re-creates dev enrollment token)
+	cd $(PROJECT_ROOT) && python scripts/dev_seed.py
 
 dev-down: ## Stop the development stack
 	docker compose down

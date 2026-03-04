@@ -66,3 +66,6 @@ platform/deployment/kong/certs/*.key
 *.minisig
 dist/
 releases/
+
+# ─── Agent dev data directory ─────────────────────────────────────────────────
+.openclaw-dev-data/

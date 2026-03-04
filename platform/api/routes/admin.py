@@ -5,6 +5,9 @@ Admin endpoints — protected by static OPENCLAW_ADMIN_TOKEN header.
 Not behind Keycloak RBAC; intended for operator bootstrap operations only.
 
 Endpoints:
+  POST /api/v1/admin/tenants              Provision a new tenant schema
+  GET  /api/v1/admin/tenants              List tenants
+
   POST /api/v1/admin/enrollment-tokens   Create a one-time agent enrollment token
   GET  /api/v1/admin/enrollment-tokens   List tokens for a tenant (without plaintext)
 """
@@ -12,6 +15,7 @@ Endpoints:
 import hashlib
 import logging
 import os
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -19,11 +23,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from ulid import ULID
 
 from ..database import get_db
 from ..models.enrollment_token import EnrollmentToken
+from ..models.tenant import Tenant
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +60,117 @@ def _require_admin(request: Request) -> None:
         )
 
 
-# ─── Request / Response models ────────────────────────────────────────────────
+# ─── Tenant models ────────────────────────────────────────────────────────────
+
+
+class CreateTenantRequest(BaseModel):
+    id: str = Field(
+        ...,
+        pattern=r"^[a-zA-Z0-9_]{1,50}$",
+        description="Tenant ID — alphanumeric + underscores, used as schema suffix",
+    )
+    name: str = Field(..., max_length=256)
+    slug: str = Field(..., pattern=r"^[a-z0-9-]{1,64}$")
+    plan: str = Field("standard", description="standard | enterprise")
+
+
+class TenantResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    schema_name: str
+    plan: str
+    created_at: datetime
+
+
+# ─── Tenant endpoints ─────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/tenants",
+    response_model=TenantResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Provision a new tenant",
+)
+async def create_tenant(
+    body: CreateTenantRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> TenantResponse:
+    """
+    Create a tenant record and provision its PostgreSQL schema with all tables and RLS policies.
+
+    This calls the create_tenant_schema() PG function defined in migration 0001_baseline.
+    Safe to call multiple times — uses CREATE SCHEMA IF NOT EXISTS and CREATE TABLE IF NOT EXISTS.
+    """
+    _require_admin(request)
+
+    schema_name = f"tenant_{body.id.replace('-', '_')}"
+    now = datetime.now(timezone.utc)
+
+    # Idempotency: return existing tenant if already present
+    existing = await db.execute(select(Tenant).where(Tenant.id == body.id))
+    tenant = existing.scalar_one_or_none()
+
+    if tenant is None:
+        tenant = Tenant(
+            id=body.id,
+            name=body.name,
+            slug=body.slug,
+            keycloak_realm="openclaw-platform",
+            minio_bucket=f"openclaw-{body.slug}",
+            schema_name=schema_name,
+            is_active=True,
+            plan=body.plan,
+            created_at=now,
+        )
+        db.add(tenant)
+        await db.flush()  # persist before schema creation
+
+    # Provision (or re-provision) the PG schema via the migration-installed function
+    await db.execute(text("SELECT create_tenant_schema(:tid)"), {"tid": body.id})
+    await db.commit()
+
+    logger.info("Tenant provisioned: id=%s schema=%s", body.id, schema_name)
+
+    return TenantResponse(
+        id=tenant.id,
+        name=tenant.name,
+        slug=tenant.slug,
+        schema_name=schema_name,
+        plan=tenant.plan,
+        created_at=tenant.created_at,
+    )
+
+
+@router.get(
+    "/tenants",
+    response_model=list[TenantResponse],
+    summary="List tenants",
+)
+async def list_tenants(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> list[TenantResponse]:
+    """List all provisioned tenants."""
+    _require_admin(request)
+
+    result = await db.execute(select(Tenant).order_by(Tenant.created_at))
+    rows = result.scalars().all()
+    return [
+        TenantResponse(
+            id=t.id,
+            name=t.name,
+            slug=t.slug,
+            schema_name=t.schema_name,
+            plan=t.plan,
+            created_at=t.created_at,
+        )
+        for t in rows
+    ]
+
+
+# ─── Enrollment token models ──────────────────────────────────────────────────
 
 
 class CreateTokenRequest(BaseModel):

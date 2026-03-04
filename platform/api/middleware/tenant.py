@@ -4,6 +4,7 @@ request state. The DB session layer then sets search_path per request.
 """
 
 import logging
+import os
 from typing import Optional
 
 from fastapi import Request, Response
@@ -32,6 +33,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         tenant_id = _extract_tenant_id(request)
+
+        # Dev mode: fall back to OPENCLAW_DEV_TENANT_ID when no JWT / header is present.
+        # This lets the console work without Keycloak in local development.
+        if tenant_id is None and os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
+            tenant_id = os.getenv("OPENCLAW_DEV_TENANT_ID", "dev")
+            logger.debug("Dev mode — using tenant_id=%s", tenant_id)
 
         if tenant_id:
             request.state.tenant_id = tenant_id
