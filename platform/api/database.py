@@ -57,12 +57,8 @@ async def get_tenant_db(tenant_id: str) -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             schema = f"tenant_{tenant_id.replace('-', '_')}"
-            await session.execute(
-                text(f"SET LOCAL search_path TO {schema}, public")
-            )
-            await session.execute(
-                text(f"SET LOCAL app.tenant_id = '{tenant_id}'")
-            )
+            await session.execute(text(f"SET LOCAL search_path TO {schema}, public"))
+            await session.execute(text(f"SET LOCAL app.tenant_id = '{tenant_id}'"))
             yield session
             await session.commit()
         except Exception:
@@ -83,9 +79,8 @@ async def get_tenant_session(
     """
     from fastapi import HTTPException
 
-    tenant_id = (
-        getattr(request.state, "tenant_id", None)
-        or request.headers.get("X-Tenant-ID")
+    tenant_id = getattr(request.state, "tenant_id", None) or request.headers.get(
+        "X-Tenant-ID"
     )
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Tenant ID required")

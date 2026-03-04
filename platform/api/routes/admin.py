@@ -174,10 +174,17 @@ async def list_tenants(
 
 class CreateTokenRequest(BaseModel):
     tenant_id: str = Field(..., description="Tenant this token grants enrollment into")
-    label: Optional[str] = Field(None, description="Human-readable label for audit purposes")
-    max_uses: int = Field(1, ge=1, le=100, description="Maximum enrollment uses (default: 1)")
+    label: Optional[str] = Field(
+        None, description="Human-readable label for audit purposes"
+    )
+    max_uses: int = Field(
+        1, ge=1, le=100, description="Maximum enrollment uses (default: 1)"
+    )
     expires_hours: int = Field(
-        24, ge=1, le=720, description="Hours until token expires (default: 24, max: 720)"
+        24,
+        ge=1,
+        le=720,
+        description="Hours until token expires (default: 24, max: 720)",
     )
 
 

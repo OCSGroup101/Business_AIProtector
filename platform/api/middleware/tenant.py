@@ -100,5 +100,6 @@ def _decode_tenant_from_jwt(token: str) -> Optional[str]:
 def _is_valid_tenant_id(tenant_id: str) -> bool:
     """Validate tenant_id format to prevent SQL injection via schema name."""
     import re
+
     # Must match: alphanumeric and underscores only, 1-50 chars
-    return bool(re.match(r'^[a-zA-Z0-9_]{1,50}$', tenant_id))
+    return bool(re.match(r"^[a-zA-Z0-9_]{1,50}$", tenant_id))

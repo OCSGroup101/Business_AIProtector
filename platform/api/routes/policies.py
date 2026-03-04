@@ -43,8 +43,11 @@ async def list_policies(
     result = await db.execute(select(Policy).where(Policy.is_active.is_(True)))
     return [
         PolicySummary(
-            id=p.id, name=p.name, version=p.version,
-            is_default=p.is_default, agent_count=p.agent_count,
+            id=p.id,
+            name=p.name,
+            version=p.version,
+            is_default=p.is_default,
+            agent_count=p.agent_count,
             created_at=p.created_at,
         )
         for p in result.scalars()
@@ -72,7 +75,10 @@ async def create_policy(
     await db.flush()
     logger.info("Policy created: %s (%s)", policy.id, policy.name)
     return PolicySummary(
-        id=policy.id, name=policy.name, version=policy.version,
-        is_default=policy.is_default, agent_count=0,
+        id=policy.id,
+        name=policy.name,
+        version=policy.version,
+        is_default=policy.is_default,
+        agent_count=0,
         created_at=policy.created_at,
     )

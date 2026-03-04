@@ -75,23 +75,25 @@ async def fetch_kev_entries() -> list[dict]:
             tags.append("ransomware")
         tags.append("actively-exploited")
 
-        results.append({
-            "ioc_type": "cve",
-            "value": cve_id,
-            "score": score,
-            "sources": sources,
-            "tags": tags,
-            "first_seen": first_seen,
-            "metadata": {
-                "vendor_project": entry.get("vendorProject", ""),
-                "product": entry.get("product", ""),
-                "vulnerability_name": entry.get("vulnerabilityName", ""),
-                "short_description": entry.get("shortDescription", ""),
-                "required_action": entry.get("requiredAction", ""),
-                "due_date": entry.get("dueDate", ""),
-                "known_ransomware_use": ransomware_use,
-            },
-        })
+        results.append(
+            {
+                "ioc_type": "cve",
+                "value": cve_id,
+                "score": score,
+                "sources": sources,
+                "tags": tags,
+                "first_seen": first_seen,
+                "metadata": {
+                    "vendor_project": entry.get("vendorProject", ""),
+                    "product": entry.get("product", ""),
+                    "vulnerability_name": entry.get("vulnerabilityName", ""),
+                    "short_description": entry.get("shortDescription", ""),
+                    "required_action": entry.get("requiredAction", ""),
+                    "due_date": entry.get("dueDate", ""),
+                    "known_ransomware_use": ransomware_use,
+                },
+            }
+        )
 
     logger.info("CISA KEV: fetched %d CVE entries", len(results))
     return results

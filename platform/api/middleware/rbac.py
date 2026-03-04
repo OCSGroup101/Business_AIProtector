@@ -43,21 +43,31 @@ class Permission(str, Enum):
 # Permission matrix
 _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
     Role.TENANT_ADMIN: {
-        Permission.AGENTS_READ, Permission.AGENTS_WRITE,
-        Permission.POLICIES_READ, Permission.POLICIES_WRITE,
+        Permission.AGENTS_READ,
+        Permission.AGENTS_WRITE,
+        Permission.POLICIES_READ,
+        Permission.POLICIES_WRITE,
         Permission.CONTAINMENT_APPLY,
-        Permission.INCIDENTS_READ, Permission.INCIDENTS_WRITE, Permission.INCIDENTS_RESOLVE,
+        Permission.INCIDENTS_READ,
+        Permission.INCIDENTS_WRITE,
+        Permission.INCIDENTS_RESOLVE,
         Permission.USERS_MANAGE,
         Permission.AUDIT_READ,
-        Permission.INTEL_READ, Permission.INTEL_WRITE,
+        Permission.INTEL_READ,
+        Permission.INTEL_WRITE,
     },
     Role.SECURITY_ADMIN: {
-        Permission.AGENTS_READ, Permission.AGENTS_WRITE,
-        Permission.POLICIES_READ, Permission.POLICIES_WRITE,
+        Permission.AGENTS_READ,
+        Permission.AGENTS_WRITE,
+        Permission.POLICIES_READ,
+        Permission.POLICIES_WRITE,
         Permission.CONTAINMENT_APPLY,
-        Permission.INCIDENTS_READ, Permission.INCIDENTS_WRITE, Permission.INCIDENTS_RESOLVE,
+        Permission.INCIDENTS_READ,
+        Permission.INCIDENTS_WRITE,
+        Permission.INCIDENTS_RESOLVE,
         Permission.AUDIT_READ,
-        Permission.INTEL_READ, Permission.INTEL_WRITE,
+        Permission.INTEL_READ,
+        Permission.INTEL_WRITE,
     },
     Role.HELPDESK: {
         Permission.AGENTS_READ,
@@ -110,6 +120,7 @@ def get_current_user_role(request: Request) -> Role:
 
 def require_permission(permission: Permission) -> Callable:
     """FastAPI dependency factory — raises 403 if role lacks the permission."""
+
     def dependency(role: Role = Depends(get_current_user_role)) -> Role:
         if permission not in _ROLE_PERMISSIONS.get(role, set()):
             raise HTTPException(
@@ -117,6 +128,7 @@ def require_permission(permission: Permission) -> Callable:
                 detail=f"Role '{role}' does not have permission '{permission}'",
             )
         return role
+
     return dependency
 
 
@@ -145,4 +157,5 @@ def _extract_role_from_jwt(token: str) -> Optional[str]:
 
 class RBACMiddleware:
     """Placeholder — RBAC is enforced per-route via Depends(require_permission(...))."""
+
     pass
