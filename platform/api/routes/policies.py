@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -40,7 +40,7 @@ async def list_policies(
     db: AsyncSession = Depends(get_db),
     _role=Depends(require_permission(Permission.POLICIES_READ)),
 ) -> list[PolicySummary]:
-    result = await db.execute(select(Policy).where(Policy.is_active == True))
+    result = await db.execute(select(Policy).where(Policy.is_active.is_(True)))
     return [
         PolicySummary(
             id=p.id, name=p.name, version=p.version,

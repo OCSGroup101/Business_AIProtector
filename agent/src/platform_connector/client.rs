@@ -46,7 +46,10 @@ pub fn build_platform_client(cfg: &AgentConfig, timeout: Duration) -> Result<Cli
     let identity = match Identity::from_pem(&pem_bundle) {
         Ok(id) => id,
         Err(e) => {
-            warn!("mTLS identity load failed ({}); falling back to plain HTTP", e);
+            warn!(
+                "mTLS identity load failed ({}); falling back to plain HTTP",
+                e
+            );
             return Ok(Client::builder().timeout(timeout).build()?);
         }
     };

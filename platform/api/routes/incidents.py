@@ -8,9 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
-from ulid import ULID
 
-from ..database import get_db, get_tenant_session
+from ..database import get_tenant_session
 from ..models.incident import Incident, IncidentEvent
 from ..middleware.rbac import Permission, require_permission
 

@@ -12,7 +12,7 @@ use tracing::{info, warn};
 /// Only available when compiled with --features stt and enabled in policy.
 #[cfg(feature = "stt")]
 pub async fn listen_once() -> Result<String> {
-    use whisper_rs::{WhisperContext, WhisperContextParameters, FullParams, SamplingStrategy};
+    use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
     // Phase 3: Full implementation with microphone capture via cpal crate
     // and whisper.cpp inference.
     todo!("STT implementation — Phase 3")

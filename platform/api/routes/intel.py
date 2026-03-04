@@ -40,7 +40,7 @@ async def list_iocs(
     db: AsyncSession = Depends(get_db),
     _role=Depends(require_permission(Permission.INTEL_READ)),
 ) -> list[IocSummary]:
-    query = select(IocEntry).where(IocEntry.is_active == True).limit(limit)
+    query = select(IocEntry).where(IocEntry.is_active.is_(True)).limit(limit)
     if ioc_type:
         query = query.where(IocEntry.ioc_type == ioc_type)
     if min_confidence > 0:

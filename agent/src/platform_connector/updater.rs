@@ -22,7 +22,11 @@ pub struct Updater {
 }
 
 impl Updater {
-    pub fn new(platform_url: impl Into<String>, agent_id: impl Into<String>, signing_pubkey: Option<String>) -> Self {
+    pub fn new(
+        platform_url: impl Into<String>,
+        agent_id: impl Into<String>,
+        signing_pubkey: Option<String>,
+    ) -> Self {
         Self {
             platform_url: platform_url.into(),
             agent_id: agent_id.into(),
