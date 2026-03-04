@@ -15,5 +15,5 @@ minio==7.2.9
 cryptography==43.0.1
 minisign==0.2.0
 python-multipart==0.0.12
-structlog==24.4.0
+structlog==25.5.0
 prometheus-fastapi-instrumentator==7.0.0
