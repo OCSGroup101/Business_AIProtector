@@ -1,0 +1,73 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1110 — Brute Force (credential spraying / password guessing)
+#
+# These rules use process-level indicators for tools commonly used to perform
+# credential brute-force and password spraying attacks.
+
+[[rules]]
+id = "OC-BEH-0084"
+name = "Credential Spraying Tool Execution"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0006"]
+techniques = ["T1110.003"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "spray.exe",
+  "ruler.exe",
+  "crackmapexec.exe",
+  "cme.exe",
+  "hydra.exe",
+  "medusa.exe",
+  "ncrack.exe",
+  "kerbrute.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = ["terminate_process"]
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0085"
+name = "Kerberoasting or AS-REP Roasting Attack"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0006"]
+techniques = ["T1558.003", "T1558.004"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = ["rubeus.exe", "impacket.exe", "getspn.exe", "powershell.exe", "pwsh.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [
+  "kerberoast",
+  "asreproast",
+  "GetUserSPNs",
+  "Rubeus.exe kerberoast",
+  "Rubeus.exe asreproast",
+  "Invoke-Kerberoast",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true

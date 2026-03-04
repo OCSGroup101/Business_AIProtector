@@ -19,6 +19,7 @@ use tracing::{debug, info, warn};
 
 use crate::config::AgentConfig;
 use crate::core::event_bus::TelemetryEvent;
+use crate::platform_connector::client::build_platform_client;
 
 const MAX_BATCH: usize = 50;
 const DRAIN_TIMEOUT_MS: u64 = 200; // collect events for up to 200ms before flushing
@@ -38,9 +39,7 @@ impl AlertUploader {
         tenant_id: &str,
         receiver: mpsc::Receiver<TelemetryEvent>,
     ) -> Result<Self> {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()?;
+        let client = build_platform_client(cfg, Duration::from_secs(30))?;
 
         Ok(Self {
             client,

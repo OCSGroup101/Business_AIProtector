@@ -17,6 +17,7 @@ use tracing::{debug, info, warn};
 
 use crate::config::AgentConfig;
 use crate::detection::ioc_store::IocStore;
+use crate::platform_connector::client::build_platform_client;
 
 const DEFAULT_POLL_INTERVAL_SECS: u64 = 300; // 5 minutes
 
@@ -46,9 +47,7 @@ impl IntelReceiver {
         tenant_id: &str,
         ioc_store: Arc<IocStore>,
     ) -> Result<Self> {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(60))
-            .build()?;
+        let client = build_platform_client(cfg, Duration::from_secs(60))?;
 
         let poll_secs = cfg
             .platform

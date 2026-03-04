@@ -1,0 +1,74 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1486 — Data Encrypted for Impact / T1490 — Inhibit System Recovery
+#
+# Ransomware almost universally deletes Volume Shadow Copies before encryption
+# to prevent recovery.  Detecting these commands is one of the highest-fidelity
+# pre-encryption signals available.
+
+[[rules]]
+id = "OC-BEH-0082"
+name = "Volume Shadow Copy Deletion (Ransomware Pre-Stage)"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0040"]
+techniques = ["T1490"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = ["vssadmin.exe", "wmic.exe", "powershell.exe", "pwsh.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [
+  "delete shadows",
+  "Delete Shadows",
+  "shadowcopy delete",
+  "ShadowCopy Delete",
+  "Win32_ShadowCopy",
+]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["isolate_host"]
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0083"
+name = "Backup Catalog Destruction (wbadmin / bcdedit)"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0040"]
+techniques = ["T1490"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = ["wbadmin.exe", "bcdedit.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [
+  "delete catalog",
+  "Delete Catalog",
+  "recoveryenabled no",
+  "bootstatuspolicy ignoreallfailures",
+]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["isolate_host"]
+notify       = true

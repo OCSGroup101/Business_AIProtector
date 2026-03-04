@@ -48,13 +48,13 @@ impl CollectorSet {
             collectors.push(Box::new(filesystem::FilesystemCollector::new(cfg, agent_id, tenant_id)?));
         }
         if cfg.collectors.network_enabled {
-            collectors.push(Box::new(network::NetworkCollector::new(cfg)?));
+            collectors.push(Box::new(network::NetworkCollector::new(cfg, agent_id, tenant_id)?));
         }
         if cfg.collectors.persistence_enabled {
-            collectors.push(Box::new(persistence::PersistenceCollector::new(cfg)?));
+            collectors.push(Box::new(persistence::PersistenceCollector::new(cfg, agent_id, tenant_id)?));
         }
         if cfg.collectors.auth_enabled {
-            collectors.push(Box::new(auth::AuthCollector::new(cfg)?));
+            collectors.push(Box::new(auth::AuthCollector::new(cfg, agent_id, tenant_id)?));
         }
         if cfg.collectors.integrity_enabled {
             collectors.push(Box::new(integrity::IntegrityCollector::new(cfg)?));

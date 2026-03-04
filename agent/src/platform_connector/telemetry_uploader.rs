@@ -13,6 +13,7 @@ use tracing::{debug, info, warn};
 use crate::config::AgentConfig;
 use crate::core::event_bus::TelemetryEvent;
 use crate::core::ring_buffer::RingBuffer;
+use crate::platform_connector::client::build_platform_client;
 
 pub struct TelemetryUploader {
     client: Client,
@@ -32,9 +33,7 @@ impl TelemetryUploader {
         tenant_id: &str,
         receiver: broadcast::Receiver<TelemetryEvent>,
     ) -> Result<Self> {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(60))
-            .build()?;
+        let client = build_platform_client(cfg, Duration::from_secs(60))?;
 
         let ring_buffer = RingBuffer::open(
             &cfg.storage.data_dir,

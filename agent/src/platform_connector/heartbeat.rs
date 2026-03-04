@@ -9,6 +9,7 @@ use tracing::{debug, info, warn};
 use crate::config::AgentConfig;
 use crate::core::metrics;
 use crate::core::state::AgentStateManager;
+use crate::platform_connector::client::build_platform_client;
 
 #[derive(Serialize)]
 struct HeartbeatRequest {
@@ -55,9 +56,7 @@ pub struct HeartbeatService {
 
 impl HeartbeatService {
     pub fn new(cfg: &AgentConfig, agent_id: &str, state_manager: AgentStateManager) -> Result<Self> {
-        let client = Client::builder()
-            .timeout(Duration::from_secs(15))
-            .build()?;
+        let client = build_platform_client(cfg, Duration::from_secs(15))?;
         Ok(Self {
             client,
             agent_id: agent_id.to_string(),

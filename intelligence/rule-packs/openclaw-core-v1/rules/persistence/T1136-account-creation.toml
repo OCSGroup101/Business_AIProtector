@@ -1,0 +1,81 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1136 — Create Account
+#
+# Attackers create local or domain accounts to maintain persistent access.
+# Detection focuses on the command-line invocations used to add accounts
+# and grant them elevated privileges.
+
+[[rules]]
+id = "OC-BEH-0088"
+name = "Local Account Creation"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0003"]
+techniques = ["T1136.001"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = ["net.exe", "net1.exe", "useradd", "adduser"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [
+  "user /add",
+  "user/add",
+  "localgroup Administrators",
+  "localgroup administrators",
+  "useradd",
+  "adduser",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0089"
+name = "Hidden or Service Account Creation"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0003"]
+techniques = ["T1136.001", "T1078.003"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = ["net.exe", "net1.exe", "powershell.exe", "pwsh.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [
+  "user /add",
+  "New-LocalUser",
+  "$",
+  "hidden",
+  "passwd -x",
+]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = ["$", "svc", "admin", "support", "help", "backup"]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
