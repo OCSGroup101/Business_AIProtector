@@ -6,7 +6,7 @@
 // This feature is off by default and must be explicitly enabled via policy.
 
 use anyhow::Result;
-use tracing::{info, warn};
+use tracing::warn;
 
 /// Start listening for voice commands (returns transcribed text).
 /// Only available when compiled with --features stt and enabled in policy.
