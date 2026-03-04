@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 _CMD_QUEUE_PREFIX = "agent:cmd:"
-_QUEUE_MAX_LEN = 20   # cap per-agent queue to avoid runaway growth
+_QUEUE_MAX_LEN = 20  # cap per-agent queue to avoid runaway growth
 
 
 def _key(agent_id: str) -> str:
@@ -64,7 +64,9 @@ async def pop_commands(agent_id: str, max_commands: int = 5) -> list[dict]:
             try:
                 commands.append(json.loads(raw))
             except json.JSONDecodeError:
-                logger.warning("Malformed command in queue for agent %s — discarding", agent_id)
+                logger.warning(
+                    "Malformed command in queue for agent %s — discarding", agent_id
+                )
         return commands
     except Exception as exc:
         # Redis failure must not break the heartbeat

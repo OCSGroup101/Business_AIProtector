@@ -70,14 +70,16 @@ async def create_or_update_incident(
 
     # Look for an existing open incident within the dedup window
     existing = await db.execute(
-        select(Incident).where(
+        select(Incident)
+        .where(
             and_(
                 Incident.agent_id == agent_id,
                 Incident.rule_id == rule_id,
                 Incident.status.in_(_OPEN_STATUSES),
                 Incident.first_seen_at >= dedup_cutoff,
             )
-        ).limit(1)
+        )
+        .limit(1)
     )
     incident = existing.scalar_one_or_none()
 
@@ -100,7 +102,10 @@ async def create_or_update_incident(
         db.add(incident)
         logger.info(
             "New incident created: id=%s agent=%s rule=%s severity=%s",
-            incident_id, agent_id, rule_id, severity,
+            incident_id,
+            agent_id,
+            rule_id,
+            severity,
         )
     else:
         # Update existing — bump last_seen and escalate severity if higher

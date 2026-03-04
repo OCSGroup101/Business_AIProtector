@@ -53,9 +53,13 @@ async def list_audit_logs(
     result = await db.execute(query)
     return [
         AuditEntry(
-            id=e.id, actor_id=e.actor_id, actor_role=e.actor_role,
-            action=e.action, resource_type=e.resource_type,
-            resource_id=e.resource_id, outcome=e.outcome,
+            id=e.id,
+            actor_id=e.actor_id,
+            actor_role=e.actor_role,
+            action=e.action,
+            resource_type=e.resource_type,
+            resource_id=e.resource_id,
+            outcome=e.outcome,
             occurred_at=e.occurred_at,
         )
         for e in result.scalars()

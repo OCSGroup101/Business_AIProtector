@@ -54,10 +54,14 @@ class EnrollmentToken(Base):
     )
 
     # Token expires at this time; enrollment after expiry is rejected
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     # Set when the token is used; NULL = not yet used
-    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Agent that consumed this token
     used_by_agent_id: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)

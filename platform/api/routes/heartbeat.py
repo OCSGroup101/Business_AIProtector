@@ -59,7 +59,9 @@ async def agent_heartbeat(
     agent = result.scalar_one_or_none()
 
     if agent is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     # Update heartbeat data
     agent.last_heartbeat_at = datetime.utcnow()
@@ -74,12 +76,18 @@ async def agent_heartbeat(
 
     # Drain pending commands from Redis for this agent
     raw_commands = await pop_commands(agent_id)
-    commands = [PlatformCommand(type=c["type"], payload={k: v for k, v in c.items() if k != "type"})
-                for c in raw_commands]
+    commands = [
+        PlatformCommand(
+            type=c["type"], payload={k: v for k, v in c.items() if k != "type"}
+        )
+        for c in raw_commands
+    ]
 
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
-        agent_id, request.state, len(commands),
+        agent_id,
+        request.state,
+        len(commands),
     )
 
     return HeartbeatResponse(

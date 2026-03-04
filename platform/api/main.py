@@ -93,6 +93,7 @@ app.include_router(audit.router, prefix="/api/v1/audit", tags=["audit"])
 
 # ─── Health check ─────────────────────────────────────────────────────────────
 
+
 @app.get("/health", tags=["health"])
 async def health_check() -> dict:
     """Platform health endpoint — used by load balancers and Docker healthchecks."""
@@ -103,13 +104,17 @@ async def health_check() -> dict:
 async def readiness_check() -> dict:
     """Readiness check — verifies database connectivity."""
     from .database import check_db_connection
+
     db_ok = await check_db_connection()
     if not db_ok:
-        return JSONResponse(status_code=503, content={"status": "not_ready", "db": "unreachable"})
+        return JSONResponse(
+            status_code=503, content={"status": "not_ready", "db": "unreachable"}
+        )
     return {"status": "ready"}
 
 
 # ─── Global exception handler ─────────────────────────────────────────────────
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:

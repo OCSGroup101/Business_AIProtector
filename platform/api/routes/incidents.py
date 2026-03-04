@@ -54,7 +54,12 @@ async def list_incidents(
     _role=Depends(require_permission(Permission.INCIDENTS_READ)),
 ) -> list[IncidentSummary]:
     """List incidents for the current tenant, optionally filtered."""
-    query = select(Incident).order_by(desc(Incident.first_seen_at)).limit(limit).offset(offset)
+    query = (
+        select(Incident)
+        .order_by(desc(Incident.first_seen_at))
+        .limit(limit)
+        .offset(offset)
+    )
 
     if severity:
         query = query.where(Incident.severity == severity.upper())
@@ -89,20 +94,27 @@ async def get_incident(
     _role=Depends(require_permission(Permission.INCIDENTS_READ)),
 ) -> IncidentDetail:
     """Get full incident details including timeline events."""
-    result = await db.execute(
-        select(Incident).where(Incident.id == incident_id)
-    )
+    result = await db.execute(select(Incident).where(Incident.id == incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
 
     events_result = await db.execute(
         select(IncidentEvent)
         .where(IncidentEvent.incident_id == incident_id)
         .order_by(IncidentEvent.occurred_at)
     )
-    events = [{"event_id": e.event_id, "event_type": e.event_type, "occurred_at": e.occurred_at.isoformat(), **e.event_json}
-              for e in events_result.scalars()]
+    events = [
+        {
+            "event_id": e.event_id,
+            "event_type": e.event_type,
+            "occurred_at": e.occurred_at.isoformat(),
+            **e.event_json,
+        }
+        for e in events_result.scalars()
+    ]
 
     return IncidentDetail(
         id=incident.id,
@@ -132,12 +144,22 @@ async def update_incident(
     result = await db.execute(select(Incident).where(Incident.id == incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
 
     if request.status:
-        valid_statuses = {"OPEN", "INVESTIGATING", "CONTAINED", "RESOLVED", "FALSE_POSITIVE"}
+        valid_statuses = {
+            "OPEN",
+            "INVESTIGATING",
+            "CONTAINED",
+            "RESOLVED",
+            "FALSE_POSITIVE",
+        }
         if request.status.upper() not in valid_statuses:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {request.status}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid status: {request.status}"
+            )
         incident.status = request.status.upper()
         if request.status.upper() == "RESOLVED":
             incident.resolved_at = datetime.utcnow()
@@ -147,8 +169,13 @@ async def update_incident(
 
     await db.flush()
     return IncidentSummary(
-        id=incident.id, agent_id=incident.agent_id, hostname=incident.hostname,
-        rule_name=incident.rule_name, severity=incident.severity, status=incident.status,
-        first_seen_at=incident.first_seen_at, last_seen_at=incident.last_seen_at,
+        id=incident.id,
+        agent_id=incident.agent_id,
+        hostname=incident.hostname,
+        rule_name=incident.rule_name,
+        severity=incident.severity,
+        status=incident.status,
+        first_seen_at=incident.first_seen_at,
+        last_seen_at=incident.last_seen_at,
         mitre_techniques=incident.mitre_techniques,
     )

@@ -58,7 +58,9 @@ async def ingest_telemetry_batch(
     if parse_errors > 0:
         logger.warning(
             "Agent %s: %d malformed telemetry lines in batch of %d",
-            x_agent_id, parse_errors, len(lines),
+            x_agent_id,
+            parse_errors,
+            len(lines),
         )
 
     # Determine tenant_id and agent hostname from events / headers
@@ -88,12 +90,16 @@ async def ingest_telemetry_batch(
             except Exception:
                 logger.exception(
                     "Failed to create/update incident for agent=%s rule=%s",
-                    agent_id, detection.get("rule_id"),
+                    agent_id,
+                    detection.get("rule_id"),
                 )
 
     logger.info(
         "Telemetry batch: agent=%s events=%d errors=%d incidents=%d",
-        x_agent_id, len(events), parse_errors, len(incidents_touched),
+        x_agent_id,
+        len(events),
+        parse_errors,
+        len(incidents_touched),
     )
 
     return {
