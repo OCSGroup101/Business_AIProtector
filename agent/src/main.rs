@@ -1,5 +1,7 @@
 // OpenClaw Agent — Entry Point
 // Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+// Phase 1: some modules are scaffolded but not yet fully wired up.
+#![allow(dead_code, unused_variables, unused_mut)]
 
 use anyhow::Result;
 use clap::Parser;

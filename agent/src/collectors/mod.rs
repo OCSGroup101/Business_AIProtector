@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use tracing::info;
 
 use crate::config::AgentConfig;
-use crate::core::event_bus::{EventPublisher, TelemetryEvent};
+use crate::core::event_bus::EventPublisher;
 
 pub mod auth;
 pub mod filesystem;

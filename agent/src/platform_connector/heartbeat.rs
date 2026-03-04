@@ -176,7 +176,7 @@ impl HeartbeatService {
             }
             PlatformCommand::UpdateAgent {
                 version,
-                manifest_url,
+                manifest_url: _,
             } => {
                 info!(version = %version, "Platform command: UPDATE_AGENT");
             }

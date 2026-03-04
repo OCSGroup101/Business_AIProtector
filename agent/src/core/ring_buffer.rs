@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 use rusqlite::{params, Connection};
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, warn};
 
@@ -20,7 +20,7 @@ struct RingBufferInner {
 }
 
 impl RingBuffer {
-    pub fn open(data_dir: &PathBuf, capacity: usize) -> Result<Self> {
+    pub fn open(data_dir: &Path, capacity: usize) -> Result<Self> {
         let db_path = data_dir.join("ring-buffer.db");
         let conn = Connection::open(&db_path)?;
         init_schema(&conn)?;

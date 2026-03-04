@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use rcgen::{Certificate, CertificateParams, DistinguishedName, DnType, SanType};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::info;

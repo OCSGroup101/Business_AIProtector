@@ -3,9 +3,9 @@
 use anyhow::Result;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::config::AgentConfig;
 
@@ -117,7 +117,7 @@ impl AgentStateManager {
     }
 
     /// Store mTLS cert path after enrollment
-    pub fn set_cert_paths(&self, cert: &PathBuf, key: &PathBuf) -> Result<()> {
+    pub fn set_cert_paths(&self, cert: &Path, key: &Path) -> Result<()> {
         let inner = self.inner.lock().unwrap();
         set_kv(&inner.conn, "client_cert", &cert.to_string_lossy())?;
         set_kv(&inner.conn, "client_key", &key.to_string_lossy())?;
