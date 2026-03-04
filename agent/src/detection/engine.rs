@@ -67,6 +67,7 @@ impl DetectionEngine {
         Ok(Self {
             receiver,
             ioc_store,
+            #[allow(clippy::arc_with_non_send_sync)]
             rule_loader: Arc::new(RwLock::new(rule_loader)),
             containment: ContainmentDispatcher::new(cfg)?,
             event_window: VecDeque::with_capacity(1000),

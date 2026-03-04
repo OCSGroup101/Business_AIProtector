@@ -10,8 +10,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
-use crate::core::event_bus::EventType;
-
 // ─── Rule schema ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

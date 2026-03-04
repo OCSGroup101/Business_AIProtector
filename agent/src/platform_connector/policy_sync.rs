@@ -109,7 +109,7 @@ impl PolicySync {
         Ok(())
     }
 
-    async fn fetch_and_apply(&self, expected_version: u64) -> Result<()> {
+    async fn fetch_and_apply(&self, _expected_version: u64) -> Result<()> {
         let url = format!(
             "{}/api/v1/agents/{}/policy",
             self.platform_url, self.agent_id
