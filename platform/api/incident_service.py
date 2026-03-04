@@ -19,6 +19,13 @@ from .models.incident import Incident, IncidentEvent
 logger = logging.getLogger(__name__)
 
 _DEDUP_WINDOW = timedelta(hours=24)
+
+
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 _OPEN_STATUSES = ("OPEN", "INVESTIGATING")
 
 
@@ -102,10 +109,10 @@ async def create_or_update_incident(
         db.add(incident)
         logger.info(
             "New incident created: id=%s agent=%s rule=%s severity=%s",
-            incident_id,
-            agent_id,
-            rule_id,
-            severity,
+            _safe(incident_id),
+            _safe(agent_id),
+            _safe(rule_id),
+            _safe(severity),
         )
     else:
         # Update existing — bump last_seen and escalate severity if higher

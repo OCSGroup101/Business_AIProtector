@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 class AgentSummary(BaseModel):
     id: str
     hostname: str
@@ -110,7 +115,9 @@ async def isolate_agent(
 
     await push_command(agent_id, {"type": "isolate", "reason": request.reason})
     logger.info(
-        "Isolation command queued for agent %s (reason: %s)", agent_id, request.reason
+        "Isolation command queued for agent %s (reason: %s)",
+        _safe(agent_id),
+        _safe(request.reason),
     )
     return {"status": "queued", "agent_id": agent_id}
 
