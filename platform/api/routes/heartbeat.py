@@ -63,7 +63,9 @@ async def agent_heartbeat(
     agent = result.scalar_one_or_none()
 
     if agent is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     # Update heartbeat data
     agent.last_heartbeat_at = datetime.utcnow()
@@ -75,8 +77,12 @@ async def agent_heartbeat(
 
     # Check if cert needs renewal (< 24 h remaining)
     raw_commands = await pop_commands(agent_id)
-    commands = [PlatformCommand(type=c["type"], payload={k: v for k, v in c.items() if k != "type"})
-                for c in raw_commands]
+    commands = [
+        PlatformCommand(
+            type=c["type"], payload={k: v for k, v in c.items() if k != "type"}
+        )
+        for c in raw_commands
+    ]
 
     now = datetime.now(timezone.utc)
     if agent.cert_expires_at:
@@ -86,7 +92,11 @@ async def agent_heartbeat(
         secs_remaining = (expires_at - now).total_seconds()
         if secs_remaining < CERT_RENEW_THRESHOLD_SECS:
             commands.append(PlatformCommand(type="renew_cert", payload=None))
-            logger.info("Agent %s cert expires in %.0fs — queuing renew_cert", agent_id, secs_remaining)
+            logger.info(
+                "Agent %s cert expires in %.0fs — queuing renew_cert",
+                agent_id,
+                secs_remaining,
+            )
 
     # Check for policy updates — compare agent's policy_version vs current default
     policy_update_version: Optional[int] = None
@@ -102,7 +112,9 @@ async def agent_heartbeat(
 
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
-        agent_id, request.state, len(commands),
+        agent_id,
+        request.state,
+        len(commands),
     )
 
     return HeartbeatResponse(

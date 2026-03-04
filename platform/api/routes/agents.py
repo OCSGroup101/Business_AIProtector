@@ -56,9 +56,13 @@ async def list_agents(
     result = await db.execute(query)
     return [
         AgentSummary(
-            id=a.id, hostname=a.hostname, os_platform=a.os_platform,
-            os_version=a.os_version, agent_version=a.agent_version,
-            state=a.state, last_heartbeat_at=a.last_heartbeat_at,
+            id=a.id,
+            hostname=a.hostname,
+            os_platform=a.os_platform,
+            os_version=a.os_version,
+            agent_version=a.agent_version,
+            state=a.state,
+            last_heartbeat_at=a.last_heartbeat_at,
             policy_version=a.policy_version,
         )
         for a in result.scalars()
@@ -74,11 +78,17 @@ async def get_agent(
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
     return AgentSummary(
-        id=agent.id, hostname=agent.hostname, os_platform=agent.os_platform,
-        os_version=agent.os_version, agent_version=agent.agent_version,
-        state=agent.state, last_heartbeat_at=agent.last_heartbeat_at,
+        id=agent.id,
+        hostname=agent.hostname,
+        os_platform=agent.os_platform,
+        os_version=agent.os_version,
+        agent_version=agent.agent_version,
+        state=agent.state,
+        last_heartbeat_at=agent.last_heartbeat_at,
         policy_version=agent.policy_version,
     )
 
@@ -94,10 +104,14 @@ async def isolate_agent(
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     await push_command(agent_id, {"type": "isolate", "reason": request.reason})
-    logger.info("Isolation command queued for agent %s (reason: %s)", agent_id, request.reason)
+    logger.info(
+        "Isolation command queued for agent %s (reason: %s)", agent_id, request.reason
+    )
     return {"status": "queued", "agent_id": agent_id}
 
 
