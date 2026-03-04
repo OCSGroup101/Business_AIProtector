@@ -13,7 +13,7 @@ aiokafka==0.11.0
 boto3==1.35.36
 minio==7.2.9
 cryptography==43.0.1
-minisign==0.2.0
+minisign==0.1.0
 python-multipart==0.0.12
 structlog==24.4.0
 prometheus-fastapi-instrumentator==7.0.0
