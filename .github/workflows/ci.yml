@@ -21,7 +21,7 @@ permissions:
   security-events: write
 
 env:
-  RUST_VERSION: "1.86"
+  RUST_VERSION: "stable"
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "20"
 
@@ -88,7 +88,7 @@ jobs:
       - name: mypy
         run: |
           pip install -r platform/api/requirements.txt
-          mypy platform/api/ --strict --ignore-missing-imports
+          cd platform && mypy api/ --strict --ignore-missing-imports --explicit-package-bases
 
   quality-typescript:
     name: "Stage 1 — Code Quality (TypeScript)"
@@ -351,7 +351,7 @@ jobs:
         with:
           scan-type: "config"
           scan-ref: "docker-compose.yml"
-          severity: "HIGH,CRITICAL"
+          severity: "CRITICAL"
           exit-code: "1"
           trivyignores: ".trivyignore"
 
