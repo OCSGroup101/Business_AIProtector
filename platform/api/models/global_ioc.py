@@ -25,7 +25,9 @@ class GlobalIocEntry(Base):
 
     id: Mapped[str] = mapped_column(String(30), primary_key=True)
 
-    ioc_type: Mapped[str] = mapped_column(String(32), nullable=False)  # file_hash|ip_address|domain|url
+    ioc_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # file_hash|ip_address|domain|url
     value: Mapped[str] = mapped_column(String(512), nullable=False)
     value_lower: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
 
@@ -34,7 +36,9 @@ class GlobalIocEntry(Base):
     tags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     feed_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
-    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    first_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
 
@@ -42,5 +46,8 @@ class GlobalIocEntry(Base):
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime(timezone=True),
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
     )
