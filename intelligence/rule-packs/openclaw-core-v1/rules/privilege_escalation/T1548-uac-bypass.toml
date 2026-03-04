@@ -1,0 +1,65 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1548.002 — Abuse Elevation Control Mechanism: Bypass User Account Control
+
+[[rules]]
+id = "OC-BEH-0020"
+name = "UAC Bypass via Known LOLBin Technique"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0004", "TA0005"]
+techniques = ["T1548.002"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+# Processes commonly used in UAC auto-elevation bypass chains
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "fodhelper.exe",
+  "eventvwr.exe",
+  "sdclt.exe",
+  "slui.exe",
+  "computerdefaults.exe",
+  "wsreset.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0021"
+name = "Token Impersonation via SeImpersonatePrivilege"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0004"]
+techniques = ["T1134.001", "T1134.002"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+# Potato-family exploits and token stealing tools
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "juicypotato.exe",
+  "rottenpotato.exe",
+  "sweetpotato.exe",
+  "printspoofer.exe",
+  "roguepotato.exe",
+  "godpotato.exe",
+]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["terminate_process"]
+notify       = true

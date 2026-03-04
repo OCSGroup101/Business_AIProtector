@@ -1,0 +1,84 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1021 — Remote Services: lateral movement via remote execution tools
+
+[[rules]]
+id = "OC-BEH-0030"
+name = "PsExec-Style Remote Execution Tool"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0008"]
+techniques = ["T1021.002", "T1570"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "psexec.exe",
+  "psexec64.exe",
+  "paexec.exe",
+  "remcom.exe",
+  "csexec.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0031"
+name = "WMI Remote Process Execution"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0008", "TA0002"]
+techniques = ["T1047"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "eq"
+values   = ["wmic.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = ["process call create", "/node:"]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0032"
+name = "Pass-the-Hash Mimikatz sekurlsa"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0006", "TA0008"]
+techniques = ["T1550.002", "T1003.001"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = ["sekurlsa", "lsadump", "kerberos::ptt", "kerberos::golden", "token::elevate"]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["terminate_process"]
+notify       = true

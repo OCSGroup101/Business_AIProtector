@@ -15,6 +15,7 @@ from ..models.intel import IocEntry
 from ..models.global_ioc import GlobalIocEntry
 from ..middleware.rbac import Permission, require_permission
 from ..intel.scoring import INCLUSION_THRESHOLD
+from ..intel.feed_registry import FEED_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -59,27 +60,22 @@ async def list_iocs(
 @router.get("/feeds", status_code=status.HTTP_200_OK)
 async def list_feeds(
     _role=Depends(require_permission(Permission.INTEL_READ)),
-    db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """List configured intelligence feeds and their last fetch times."""
-    # Count active global IOCs as a proxy for feed health
-    result = await db.execute(
-        select(GlobalIocEntry).where(GlobalIocEntry.is_active == True).limit(1)
-    )
-    has_data = result.scalar_one_or_none() is not None
-    mb_status = "active" if has_data else "pending"
-
-    return {
-        "feeds": [
-            {"name": "CISA KEV", "interval": "daily", "status": "pending"},
-            {"name": "MalwareBazaar", "interval": "4h", "status": mb_status},
-            {"name": "URLHaus", "interval": "2h", "status": "pending"},
-            {"name": "OTX", "interval": "4h", "status": "pending"},
-            {"name": "MISP", "interval": "1h", "status": "pending"},
-            {"name": "AbuseIPDB", "interval": "6h", "status": "pending"},
-            {"name": "MITRE ATT&CK", "interval": "weekly", "status": "pending"},
-        ]
-    }
+    """List configured intelligence feeds and their current status."""
+    feeds = []
+    for entry in FEED_REGISTRY.values():
+        record: dict = {
+            "name": entry.name,
+            "interval": entry.interval,
+            "status": entry.status,
+        }
+        if entry.last_run is not None:
+            record["last_run"] = entry.last_run.isoformat()
+            record["last_count"] = entry.last_count
+        if entry.last_error is not None:
+            record["last_error"] = entry.last_error
+        feeds.append(record)
+    return {"feeds": feeds}
 
 
 @router.get("/ioc-bundle", status_code=status.HTTP_200_OK)

@@ -1,0 +1,65 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1041/T1048 — Exfiltration Over C2 Channel / Alternative Protocol
+
+[[rules]]
+id = "OC-BEH-0080"
+name = "Data Staged and Archived for Exfiltration"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0009", "TA0010"]
+techniques = ["T1560.001", "T1048"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "7z.exe",
+  "7za.exe",
+  "rar.exe",
+  "winrar.exe",
+  "winzip.exe",
+]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [" a ", "-p", "-hp", "password"]
+
+[rules.response]
+severity     = "MEDIUM"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0081"
+name = "Rclone or MEGAcmd Cloud Exfiltration"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0010"]
+techniques = ["T1567.002"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "rclone.exe",
+  "megacmd.exe",
+  "megaputc.exe",
+  "megasync.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true

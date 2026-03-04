@@ -1,0 +1,71 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1071 — Application Layer Protocol: Web Protocols (C2 over HTTP/S)
+
+[[rules]]
+id = "OC-BEH-0070"
+name = "PowerShell Download Cradle (Invoke-WebRequest / IEX)"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0011", "TA0002"]
+techniques = ["T1071.001", "T1059.001", "T1105"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = ["powershell.exe", "pwsh.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = [
+  "Invoke-WebRequest",
+  "iwr ",
+  "wget ",
+  "curl ",
+  "DownloadString",
+  "DownloadFile",
+  "Net.WebClient",
+  "Start-BitsTransfer",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0071"
+name = "Netcat or Raw Socket Tool"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0011"]
+techniques = ["T1095", "T1571"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "ncat.exe",
+  "netcat.exe",
+  "nc.exe",
+  "socat.exe",
+  "plink.exe",
+  "chisel.exe",
+  "ligolo.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = ["terminate_process"]
+notify       = true

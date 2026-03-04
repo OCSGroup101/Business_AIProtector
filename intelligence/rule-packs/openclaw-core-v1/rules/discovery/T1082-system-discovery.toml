@@ -1,0 +1,62 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1082/T1018/T1069 — System and Network Discovery
+
+[[rules]]
+id = "OC-BEH-0040"
+name = "Rapid System and Network Discovery Commands"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0007"]
+techniques = ["T1082", "T1016", "T1018", "T1069"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+# High-signal discovery tools when run by non-admin processes
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "nltest.exe",
+  "bloodhound.exe",
+  "sharphound.exe",
+  "adfind.exe",
+  "adrecon.exe",
+  "ldifde.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0041"
+name = "whoami Privilege and Domain Enumeration"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0007"]
+techniques = ["T1033", "T1069.002"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "eq"
+values   = ["whoami.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = ["/all", "/priv", "/groups", "/fo"]
+
+[rules.response]
+severity     = "MEDIUM"
+auto_contain = []
+notify       = true

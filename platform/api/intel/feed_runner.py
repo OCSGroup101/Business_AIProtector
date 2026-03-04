@@ -2,21 +2,26 @@
 """Background feed runner — schedules all configured threat intelligence fetchers."""
 
 import asyncio
+import hashlib
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..database import AsyncSessionLocal
 from ..models.global_ioc import GlobalIocEntry
+from .cisa_kev import fetch_kev_entries
 from .malwarebazaar import fetch_recent_hashes
+from .urlhaus import fetch_recent_urls
 from .scoring import meets_threshold
+from .feed_registry import mark_success, mark_error
 
 logger = logging.getLogger(__name__)
 
 # Feed intervals in seconds
 MALWAREBAZAAR_INTERVAL = 4 * 3600   # 4 hours
+URLHAUS_INTERVAL       = 2 * 3600   # 2 hours
+CISA_KEV_INTERVAL      = 24 * 3600  # daily
 
 
 async def _upsert_iocs(iocs: list[dict]) -> int:
@@ -34,8 +39,6 @@ async def _upsert_iocs(iocs: list[dict]) -> int:
         if not meets_threshold(ioc["score"]):
             continue
         value_lower = ioc["value"].lower()
-        # Generate a stable ULID-style ID from type+value — use first 26 chars of hex sha
-        import hashlib
         raw_id = hashlib.sha256(f"{ioc['ioc_type']}:{value_lower}".encode()).hexdigest()[:26]
         rows.append(
             {
@@ -78,26 +81,43 @@ async def _upsert_iocs(iocs: list[dict]) -> int:
     return len(rows)
 
 
-async def _run_malwarebazaar_loop() -> None:
-    """Runs the MalwareBazaar feed in an infinite loop with MALWAREBAZAAR_INTERVAL delay."""
-    logger.info("MalwareBazaar feed runner started (interval=%ds)", MALWAREBAZAAR_INTERVAL)
+async def _run_feed(
+    feed_key: str,
+    fetch_fn,
+    interval: int,
+) -> None:
+    """Generic feed loop: fetch → upsert → sleep → repeat."""
+    logger.info("Feed '%s' runner started (interval=%ds)", feed_key, interval)
     while True:
         try:
-            iocs = await fetch_recent_hashes()
+            iocs = await fetch_fn()
             count = await _upsert_iocs(iocs)
-            logger.info("MalwareBazaar: upserted %d IOCs into global store", count)
-        except Exception:
-            logger.exception("MalwareBazaar feed runner error — will retry next cycle")
-        await asyncio.sleep(MALWAREBAZAAR_INTERVAL)
+            mark_success(feed_key, count)
+            logger.info("Feed '%s': upserted %d IOCs", feed_key, count)
+        except Exception as exc:
+            mark_error(feed_key, str(exc))
+            logger.exception("Feed '%s' error — will retry next cycle", feed_key)
+        await asyncio.sleep(interval)
 
 
 def start_feed_tasks() -> list[asyncio.Task]:
     """
     Launch all feed background tasks and return their Task handles.
-    Call from the FastAPI lifespan after app startup.
+    Called from the FastAPI lifespan after app startup.
     """
     tasks = [
-        asyncio.create_task(_run_malwarebazaar_loop(), name="feed:malwarebazaar"),
+        asyncio.create_task(
+            _run_feed("malwarebazaar", fetch_recent_hashes, MALWAREBAZAAR_INTERVAL),
+            name="feed:malwarebazaar",
+        ),
+        asyncio.create_task(
+            _run_feed("urlhaus", fetch_recent_urls, URLHAUS_INTERVAL),
+            name="feed:urlhaus",
+        ),
+        asyncio.create_task(
+            _run_feed("cisa_kev", fetch_kev_entries, CISA_KEV_INTERVAL),
+            name="feed:cisa_kev",
+        ),
     ]
     logger.info("Threat intelligence feed tasks started (%d feeds)", len(tasks))
     return tasks

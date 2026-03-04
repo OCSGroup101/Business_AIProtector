@@ -1,0 +1,59 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# T1053.005 — Scheduled Task/Job: Scheduled Task
+
+[[rules]]
+id = "OC-BEH-0060"
+name = "Scheduled Task Created via schtasks"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0003", "TA0004"]
+techniques = ["T1053.005"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "eq"
+values   = ["schtasks.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = ["/create", "/sc", "/tr", "/tn"]
+
+[rules.response]
+severity     = "MEDIUM"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0061"
+name = "New Windows Service Created"
+enabled = true
+
+[rules.mitre]
+tactics    = ["TA0003", "TA0004"]
+techniques = ["T1543.003"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "eq"
+values   = ["sc.exe"]
+
+[[rules.match.conditions]]
+field    = "payload.command_line"
+operator = "contains"
+values   = ["create", "binpath=", "binPath="]
+
+[rules.response]
+severity     = "MEDIUM"
+auto_contain = []
+notify       = true
