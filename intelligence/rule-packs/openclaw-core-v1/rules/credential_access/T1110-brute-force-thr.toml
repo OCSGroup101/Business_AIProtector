@@ -1,0 +1,32 @@
+## OC-THR-0001 — Brute Force: Repeated Authentication Failures (per Account)
+##
+## Fires when 8 or more authentication failures occur for the same user account
+## within 60 seconds.  This threshold distinguishes targeted credential guessing
+## from incidental typos while remaining below common lockout thresholds.
+##
+## The companion behavioral rule OC-BEH-0084 catches tool signatures (Hydra,
+## CrackMapExec) in a single event.  This threshold rule catches tool-agnostic
+## slow-spray and protocol-level brute force that leaves no process artifacts.
+##
+## MITRE: T1110.001 (Password Guessing), T1110.003 (Password Spraying)
+## Phase: 2 (threshold rule)
+
+[[rules]]
+id       = "OC-THR-0001"
+name     = "Brute force: repeated authentication failures for same account"
+enabled  = true
+
+[rules.mitre]
+tactics    = ["TA0006"]
+techniques = ["T1110.001", "T1110.003"]
+
+[rules.match]
+type            = "threshold"
+event_types     = ["auth.logon_failure"]
+threshold       = 8
+window_seconds  = 60
+correlation_key = "principal.user"
+
+[rules.response]
+severity = "HIGH"
+notify   = true

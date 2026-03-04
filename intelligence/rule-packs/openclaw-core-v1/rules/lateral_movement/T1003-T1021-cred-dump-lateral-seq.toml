@@ -1,0 +1,62 @@
+## OC-SEQ-0001 — Credential Dump → Lateral Movement Sequence
+##
+## Fires when a known credential-dumping tool runs and is followed within
+## 5 minutes by an outbound connection on a lateral-movement port (SMB/WMI/RDP/WinRM).
+## Correlated per host — both steps must occur on the same endpoint.
+##
+## MITRE: T1003.001 (LSASS Memory), T1021.002 (SMB/Windows Admin Shares)
+## Phase: 2 (sequence rule)
+
+[[rules]]
+id       = "OC-SEQ-0001"
+name     = "Credential dumping tool followed by lateral movement connection"
+enabled  = true
+
+[rules.mitre]
+tactics    = ["TA0006", "TA0008"]
+techniques = ["T1003.001", "T1021.002", "T1021.006"]
+
+[rules.match]
+type            = "sequence"
+window_seconds  = 300
+correlation_key = "hostname"
+
+# Step 1: known credential-dumping process executes
+[[rules.match.sequence]]
+event_type = "process.create"
+
+[[rules.match.sequence.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "mimikatz.exe",
+  "procdump.exe",
+  "procdump64.exe",
+  "wce.exe",
+  "pwdump7.exe",
+  "gsecdump.exe",
+  "fgdump.exe",
+  "wdigest.exe",
+  "lsassy.exe",
+  "nanodump.exe",
+]
+
+# Step 2: outbound connection to lateral-movement port within the same window
+[[rules.match.sequence]]
+event_type = "network.connect"
+
+[[rules.match.sequence.conditions]]
+field    = "payload.remote_port"
+operator = "in"
+values   = [
+  "445",   # SMB
+  "135",   # RPC/WMI
+  "3389",  # RDP
+  "5985",  # WinRM HTTP
+  "5986",  # WinRM HTTPS
+]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["isolate_network"]
+notify       = true
