@@ -131,7 +131,7 @@ OpenClaw is three components that work together:
 ### Run the dev stack
 
 ```bash
-git clone https://github.com/OCSGroup101/Endpoint_Protector.git
+git clone https://github.com/OCSGroup101/Business_AIProtector.git
 cd Endpoint_Protector
 
 # Start the full backend (Postgres, Redis, Kafka, Keycloak, Kong, MinIO)
@@ -244,7 +244,7 @@ Cross-tenant data access returns 403 — never an empty 200. This is enforced in
 
 ## Security
 
-Found a vulnerability? Please report it through [GitHub Security Advisories](https://github.com/OCSGroup101/Endpoint_Protector/security/advisories/new) rather than opening a public issue. We acknowledge within 48 hours and resolve CRITICAL findings within 14 days.
+Found a vulnerability? Please report it through [GitHub Security Advisories](https://github.com/OCSGroup101/Business_AIProtector/security/advisories/new) rather than opening a public issue. We acknowledge within 48 hours and resolve CRITICAL findings within 14 days.
 
 See [SECURITY.md](SECURITY.md) for our full disclosure policy.
 
