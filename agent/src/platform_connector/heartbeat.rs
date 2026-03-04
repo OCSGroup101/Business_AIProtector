@@ -7,6 +7,7 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 use crate::config::AgentConfig;
+use crate::core::metrics;
 use crate::core::state::AgentStateManager;
 
 #[derive(Serialize)]
@@ -80,14 +81,15 @@ impl HeartbeatService {
     }
 
     async fn send_heartbeat(&self) -> Result<()> {
+        let resource = metrics::sample();
         let request = HeartbeatRequest {
             agent_id: self.agent_id.clone(),
             agent_version: env!("CARGO_PKG_VERSION").to_string(),
             state: self.state_manager.current_state().to_string(),
             policy_version: self.state_manager.policy_version(),
             metrics: HealthMetrics {
-                cpu_percent: 0.0,  // Phase 1: read from /proc/stat or GetSystemTimes
-                ram_mb: 0,         // Phase 1: read from /proc/self/status or GetProcessMemoryInfo
+                cpu_percent: resource.cpu_percent,
+                ram_mb: resource.ram_mb,
                 ring_buffer_fill_pct: 0,
                 events_processed_since_last_heartbeat: 0,
             },

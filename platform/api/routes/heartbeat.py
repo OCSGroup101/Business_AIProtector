@@ -9,7 +9,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ..database import get_db
+from ..command_queue import pop_commands
+from ..database import get_tenant_session
 from ..models.agent import Agent
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ class HeartbeatResponse(BaseModel):
 async def agent_heartbeat(
     agent_id: str = Path(...),
     request: HeartbeatRequest = ...,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
 ) -> HeartbeatResponse:
     """
     Process an agent heartbeat.
@@ -68,15 +69,18 @@ async def agent_heartbeat(
 
     await db.flush()
 
-    # Check for policy updates
+    # Check for policy updates (Phase 2: compare versions)
     policy_update_version: Optional[int] = None
-    # Phase 1: Compare agent.policy_version vs current policy version for tenant
-    # if current_version > request.policy_version: policy_update_version = current_version
 
-    commands: list[PlatformCommand] = []
-    # Phase 1: Check command queue in Redis for this agent
+    # Drain pending commands from Redis for this agent
+    raw_commands = await pop_commands(agent_id)
+    commands = [PlatformCommand(type=c["type"], payload={k: v for k, v in c.items() if k != "type"})
+                for c in raw_commands]
 
-    logger.debug("Heartbeat received from agent %s (state: %s)", agent_id, request.state)
+    logger.debug(
+        "Heartbeat received from agent %s (state: %s, commands: %d)",
+        agent_id, request.state, len(commands),
+    )
 
     return HeartbeatResponse(
         policy_update_version=policy_update_version,

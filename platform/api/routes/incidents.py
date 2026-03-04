@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from ulid import ULID
 
-from ..database import get_db
+from ..database import get_db, get_tenant_session
 from ..models.incident import Incident, IncidentEvent
 from ..middleware.rbac import Permission, require_permission
 
@@ -51,7 +51,7 @@ async def list_incidents(
     agent_id: Optional[str] = Query(None),
     limit: int = Query(50, le=500),
     offset: int = Query(0),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.INCIDENTS_READ)),
 ) -> list[IncidentSummary]:
     """List incidents for the current tenant, optionally filtered."""
@@ -86,7 +86,7 @@ async def list_incidents(
 @router.get("/{incident_id}", response_model=IncidentDetail)
 async def get_incident(
     incident_id: str = Path(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.INCIDENTS_READ)),
 ) -> IncidentDetail:
     """Get full incident details including timeline events."""
@@ -126,7 +126,7 @@ async def get_incident(
 async def update_incident(
     incident_id: str = Path(...),
     request: UpdateIncidentRequest = ...,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.INCIDENTS_WRITE)),
 ) -> IncidentSummary:
     """Update incident status or assignment."""

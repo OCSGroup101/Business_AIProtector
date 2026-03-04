@@ -9,7 +9,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
-from ..database import get_db
+from ..command_queue import push_command
+from ..database import get_db, get_tenant_session
 from ..models.agent import Agent
 from ..middleware.rbac import Permission, require_permission
 
@@ -38,7 +39,7 @@ async def list_agents(
     state: Optional[str] = Query(None),
     limit: int = Query(100, le=1000),
     offset: int = Query(0),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.AGENTS_READ)),
 ) -> list[AgentSummary]:
     """List all agents for the current tenant."""
@@ -67,7 +68,7 @@ async def list_agents(
 @router.get("/{agent_id}", response_model=AgentSummary)
 async def get_agent(
     agent_id: str = Path(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.AGENTS_READ)),
 ) -> AgentSummary:
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
@@ -86,7 +87,7 @@ async def get_agent(
 async def isolate_agent(
     agent_id: str = Path(...),
     request: IsolateRequest = ...,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
 ) -> dict:
     """Queue a host isolation command to be delivered on next heartbeat."""
@@ -95,7 +96,7 @@ async def isolate_agent(
     if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
-    # Phase 1: Push isolate command to Redis agent command queue
+    await push_command(agent_id, {"type": "isolate", "reason": request.reason})
     logger.info("Isolation command queued for agent %s (reason: %s)", agent_id, request.reason)
     return {"status": "queued", "agent_id": agent_id}
 
@@ -103,9 +104,10 @@ async def isolate_agent(
 @router.delete("/{agent_id}/isolate", status_code=status.HTTP_202_ACCEPTED)
 async def lift_isolation(
     agent_id: str = Path(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
 ) -> dict:
     """Queue a lift-isolation command."""
+    await push_command(agent_id, {"type": "lift_isolation"})
     logger.info("Lift-isolation command queued for agent %s", agent_id)
     return {"status": "queued", "agent_id": agent_id}

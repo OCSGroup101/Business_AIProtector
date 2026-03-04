@@ -76,6 +76,12 @@ futures = "0.3"
 anyhow = "1.0"
 thiserror = "1.0"
 
+# ─── System resource metrics (CPU, RAM) ───────────────────────────────────────
+sysinfo = { version = "0.30", default-features = false, features = ["system"] }
+
+# ─── File system watching (filesystem collector) ──────────────────────────────
+notify = { version = "6.1", features = ["serde"] }
+
 # ─── Certificate / CSR generation (enrollment) ───────────────────────────────
 rcgen = "0.12"
 

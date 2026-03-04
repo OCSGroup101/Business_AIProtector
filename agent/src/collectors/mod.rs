@@ -45,7 +45,7 @@ impl CollectorSet {
             collectors.push(Box::new(process::ProcessCollector::new(cfg, agent_id, tenant_id)?));
         }
         if cfg.collectors.filesystem_enabled {
-            collectors.push(Box::new(filesystem::FilesystemCollector::new(cfg)?));
+            collectors.push(Box::new(filesystem::FilesystemCollector::new(cfg, agent_id, tenant_id)?));
         }
         if cfg.collectors.network_enabled {
             collectors.push(Box::new(network::NetworkCollector::new(cfg)?));

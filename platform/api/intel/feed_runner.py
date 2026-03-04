@@ -10,8 +10,10 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..database import AsyncSessionLocal
 from ..models.global_ioc import GlobalIocEntry
+from .abuseipdb import fetch_blacklist
 from .cisa_kev import fetch_kev_entries
 from .malwarebazaar import fetch_recent_hashes
+from .otx import fetch_otx_iocs
 from .urlhaus import fetch_recent_urls
 from .scoring import meets_threshold
 from .feed_registry import mark_success, mark_error
@@ -22,6 +24,8 @@ logger = logging.getLogger(__name__)
 MALWAREBAZAAR_INTERVAL = 4 * 3600   # 4 hours
 URLHAUS_INTERVAL       = 2 * 3600   # 2 hours
 CISA_KEV_INTERVAL      = 24 * 3600  # daily
+OTX_INTERVAL           = 4 * 3600   # 4 hours
+ABUSEIPDB_INTERVAL     = 6 * 3600   # 6 hours
 
 
 async def _upsert_iocs(iocs: list[dict]) -> int:
@@ -117,6 +121,14 @@ def start_feed_tasks() -> list[asyncio.Task]:
         asyncio.create_task(
             _run_feed("cisa_kev", fetch_kev_entries, CISA_KEV_INTERVAL),
             name="feed:cisa_kev",
+        ),
+        asyncio.create_task(
+            _run_feed("otx", fetch_otx_iocs, OTX_INTERVAL),
+            name="feed:otx",
+        ),
+        asyncio.create_task(
+            _run_feed("abuseipdb", fetch_blacklist, ABUSEIPDB_INTERVAL),
+            name="feed:abuseipdb",
         ),
     ]
     logger.info("Threat intelligence feed tasks started (%d feeds)", len(tasks))

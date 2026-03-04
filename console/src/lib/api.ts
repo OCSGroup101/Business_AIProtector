@@ -113,3 +113,40 @@ export async function listAgents(): Promise<AgentSummary[]> {
 export async function listFeeds(): Promise<{ feeds: FeedStatus[] }> {
   return apiFetch<{ feeds: FeedStatus[] }>("/api/v1/intel/feeds");
 }
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  incidentsBySeverity: Record<Severity, number>;
+  openTotal: number;
+  activeAgents: number;
+  totalAgents: number;
+  feeds: FeedStatus[];
+  recentIncidents: IncidentSummary[];
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const [allIncidents, agents, feedsData] = await Promise.all([
+    listIncidents({ limit: 500 }),
+    listAgents(),
+    listFeeds(),
+  ]);
+
+  const open = allIncidents.filter(
+    (i) => i.status === "OPEN" || i.status === "INVESTIGATING"
+  );
+
+  const bySeverity = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 } as Record<Severity, number>;
+  for (const inc of open) {
+    bySeverity[inc.severity] = (bySeverity[inc.severity] ?? 0) + 1;
+  }
+
+  return {
+    incidentsBySeverity: bySeverity,
+    openTotal: open.length,
+    activeAgents: agents.filter((a) => a.state === "ACTIVE").length,
+    totalAgents: agents.length,
+    feeds: feedsData.feeds,
+    recentIncidents: allIncidents.slice(0, 8),
+  };
+}
