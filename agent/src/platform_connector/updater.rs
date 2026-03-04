@@ -12,7 +12,7 @@
 
 use anyhow::Result;
 use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tracing::{info, warn};
 
 pub struct Updater {

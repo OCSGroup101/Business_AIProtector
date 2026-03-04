@@ -8,7 +8,7 @@
 // Mandatory for HIGH/CRITICAL alerts per policy.
 
 use anyhow::Result;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::core::event_bus::Severity;
 

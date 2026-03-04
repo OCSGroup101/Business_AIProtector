@@ -1,7 +1,7 @@
 // Process termination containment action
 
 use anyhow::Result;
-use tracing::{info, warn};
+use tracing::info;
 
 pub async fn terminate_process(pid: u32) -> Result<()> {
     if pid == 0 {
