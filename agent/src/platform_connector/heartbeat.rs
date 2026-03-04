@@ -42,8 +42,13 @@ struct HeartbeatResponse {
 enum PlatformCommand {
     Isolate,
     LiftIsolation,
-    UpdateAgent { version: String, manifest_url: String },
-    PullIntelBundle { bundle_id: String },
+    UpdateAgent {
+        version: String,
+        manifest_url: String,
+    },
+    PullIntelBundle {
+        bundle_id: String,
+    },
 }
 
 pub struct HeartbeatService {
@@ -55,7 +60,11 @@ pub struct HeartbeatService {
 }
 
 impl HeartbeatService {
-    pub fn new(cfg: &AgentConfig, agent_id: &str, state_manager: AgentStateManager) -> Result<Self> {
+    pub fn new(
+        cfg: &AgentConfig,
+        agent_id: &str,
+        state_manager: AgentStateManager,
+    ) -> Result<Self> {
         let client = build_platform_client(cfg, Duration::from_secs(15))?;
         Ok(Self {
             client,
@@ -67,7 +76,10 @@ impl HeartbeatService {
     }
 
     pub async fn run(self) -> Result<()> {
-        info!(interval_secs = self.interval.as_secs(), "Heartbeat service starting");
+        info!(
+            interval_secs = self.interval.as_secs(),
+            "Heartbeat service starting"
+        );
         let mut ticker = tokio::time::interval(self.interval);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -94,8 +106,12 @@ impl HeartbeatService {
             },
         };
 
-        let response = self.client
-            .post(format!("{}/api/v1/agents/{}/heartbeat", self.platform_url, self.agent_id))
+        let response = self
+            .client
+            .post(format!(
+                "{}/api/v1/agents/{}/heartbeat",
+                self.platform_url, self.agent_id
+            ))
             .json(&request)
             .send()
             .await?;
@@ -130,7 +146,10 @@ impl HeartbeatService {
                     warn!(error = %e, "Lift isolation failed");
                 }
             }
-            PlatformCommand::UpdateAgent { version, manifest_url } => {
+            PlatformCommand::UpdateAgent {
+                version,
+                manifest_url,
+            } => {
                 info!(version = %version, "Platform command: UPDATE_AGENT");
                 // Delegate to updater — Phase 1
             }

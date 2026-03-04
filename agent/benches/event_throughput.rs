@@ -21,9 +21,16 @@ fn bench_event_bus_throughput(c: &mut Criterion) {
 
                 for _ in 0..10_000 {
                     let event = TelemetryEvent::new(
-                        "agt", "ten", "bench",
-                        EventType::ProcessCreate, "host",
-                        OsInfo { platform: "test".into(), version: "0".into(), arch: "x64".into() },
+                        "agt",
+                        "ten",
+                        "bench",
+                        EventType::ProcessCreate,
+                        "host",
+                        OsInfo {
+                            platform: "test".into(),
+                            version: "0".into(),
+                            arch: "x64".into(),
+                        },
                     );
                     publisher.publish(event);
                 }

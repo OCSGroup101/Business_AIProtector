@@ -184,24 +184,50 @@ impl AgentConfig {
 
 // ─── Default value functions ──────────────────────────────────────────────────
 
-fn default_log_level() -> String { "info".to_string() }
-fn default_log_format() -> String { "text".to_string() }
-fn default_heartbeat_interval() -> u64 { 60 }
-fn default_telemetry_interval() -> u64 { 300 }
-fn default_buffer_upload_threshold() -> u8 { 50 }
-fn default_ring_buffer_capacity() -> usize { 100_000 }
-fn default_true() -> bool { true }
-fn default_sensitivity() -> String { "balanced".to_string() }
-fn default_auto_contain_severity() -> String { "HIGH".to_string() }
-fn default_tts_min_severity() -> String { "HIGH".to_string() }
+fn default_log_level() -> String {
+    "info".to_string()
+}
+fn default_log_format() -> String {
+    "text".to_string()
+}
+fn default_heartbeat_interval() -> u64 {
+    60
+}
+fn default_telemetry_interval() -> u64 {
+    300
+}
+fn default_buffer_upload_threshold() -> u8 {
+    50
+}
+fn default_ring_buffer_capacity() -> usize {
+    100_000
+}
+fn default_true() -> bool {
+    true
+}
+fn default_sensitivity() -> String {
+    "balanced".to_string()
+}
+fn default_auto_contain_severity() -> String {
+    "HIGH".to_string()
+}
+fn default_tts_min_severity() -> String {
+    "HIGH".to_string()
+}
 
 fn default_data_dir() -> PathBuf {
     #[cfg(target_os = "windows")]
-    { PathBuf::from("C:\\ProgramData\\OpenClaw") }
+    {
+        PathBuf::from("C:\\ProgramData\\OpenClaw")
+    }
     #[cfg(target_os = "macos")]
-    { PathBuf::from("/Library/Application Support/OpenClaw") }
+    {
+        PathBuf::from("/Library/Application Support/OpenClaw")
+    }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    { PathBuf::from("/var/lib/openclaw") }
+    {
+        PathBuf::from("/var/lib/openclaw")
+    }
 }
 
 fn default_watch_paths() -> Vec<PathBuf> {

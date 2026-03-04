@@ -185,9 +185,8 @@ impl RuleLoader {
         // Walk all .toml files recursively
         for entry in walkdir_toml(dir) {
             let content = std::fs::read_to_string(&entry)?;
-            let rule_file: RuleFile = toml::from_str(&content).map_err(|e| {
-                anyhow::anyhow!("Failed to parse {}: {}", entry.display(), e)
-            })?;
+            let rule_file: RuleFile = toml::from_str(&content)
+                .map_err(|e| anyhow::anyhow!("Failed to parse {}: {}", entry.display(), e))?;
 
             for rule in rule_file.rules {
                 if !rule.enabled {
@@ -207,9 +206,9 @@ impl RuleLoader {
         match rule.match_block.match_type {
             MatchType::Heuristic if !rule.match_block.lua_script.is_empty() => {
                 let chunk = self.lua.load(&rule.match_block.lua_script);
-                let func: Function = chunk.eval().map_err(|e| {
-                    anyhow::anyhow!("Lua compile error in rule {}: {}", rule.id, e)
-                })?;
+                let func: Function = chunk
+                    .eval()
+                    .map_err(|e| anyhow::anyhow!("Lua compile error in rule {}: {}", rule.id, e))?;
                 let key = self.lua.create_registry_value(func)?;
                 Ok(Some(key))
             }

@@ -101,7 +101,11 @@ impl EnrollmentClient {
         let enrollment: EnrollmentResponse = response.json().await?;
 
         // Persist certificates and key to disk
-        self.save_certs(&enrollment.client_cert_pem, &enrollment.ca_cert_pem, &key_pem)?;
+        self.save_certs(
+            &enrollment.client_cert_pem,
+            &enrollment.ca_cert_pem,
+            &key_pem,
+        )?;
 
         // Persist initial policy if returned as a string
         if let Some(policy_str) = enrollment.policy.as_str() {
@@ -174,9 +178,11 @@ fn os_version() -> String {
         std::fs::read_to_string("/etc/os-release")
             .ok()
             .and_then(|s| {
-                s.lines()
-                    .find(|l| l.starts_with("PRETTY_NAME="))
-                    .map(|l| l.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+                s.lines().find(|l| l.starts_with("PRETTY_NAME=")).map(|l| {
+                    l.trim_start_matches("PRETTY_NAME=")
+                        .trim_matches('"')
+                        .to_string()
+                })
             })
             .unwrap_or_else(|| std::env::consts::OS.to_string())
     }

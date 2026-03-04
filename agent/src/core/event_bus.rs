@@ -218,8 +218,12 @@ mod tests {
         let mut receiver = bus.subscribe();
 
         let event = TelemetryEvent::new(
-            "agt_test", "ten_test", "test_collector",
-            EventType::ProcessCreate, "test-host", make_os(),
+            "agt_test",
+            "ten_test",
+            "test_collector",
+            EventType::ProcessCreate,
+            "test-host",
+            make_os(),
         );
 
         publisher.publish(event.clone());
@@ -236,8 +240,12 @@ mod tests {
         let mut r2 = bus.subscribe();
 
         let event = TelemetryEvent::new(
-            "agt_test", "ten_test", "collector",
-            EventType::FileCreate, "host", make_os(),
+            "agt_test",
+            "ten_test",
+            "collector",
+            EventType::FileCreate,
+            "host",
+            make_os(),
         );
 
         publisher.publish(event.clone());
@@ -259,8 +267,12 @@ mod tests {
         // Flood the channel — receiver will lag
         for _ in 0..5 {
             let e = TelemetryEvent::new(
-                "agt", "ten", "col",
-                EventType::NetworkConnect, "h", make_os(),
+                "agt",
+                "ten",
+                "col",
+                EventType::NetworkConnect,
+                "h",
+                make_os(),
             );
             publisher.publish(e);
         }

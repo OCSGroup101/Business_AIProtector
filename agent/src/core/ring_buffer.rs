@@ -3,7 +3,7 @@
 // On reconnect, any buffered events are uploaded before new ones.
 
 use anyhow::Result;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tracing::{debug, warn};
@@ -36,11 +36,9 @@ impl RingBuffer {
         let inner = self.inner.lock().unwrap();
 
         // Enforce capacity — drop oldest if needed
-        let count: usize = inner.conn.query_row(
-            "SELECT COUNT(*) FROM events",
-            [],
-            |r| r.get(0),
-        )?;
+        let count: usize = inner
+            .conn
+            .query_row("SELECT COUNT(*) FROM events", [], |r| r.get(0))?;
 
         if count >= self.capacity {
             let dropped = self.capacity / 10; // evict 10% at a time
@@ -50,7 +48,11 @@ impl RingBuffer {
                 )",
                 params![dropped],
             )?;
-            warn!(dropped, capacity = self.capacity, "Ring buffer full — oldest events evicted");
+            warn!(
+                dropped,
+                capacity = self.capacity,
+                "Ring buffer full — oldest events evicted"
+            );
         }
 
         inner.conn.execute(
@@ -71,7 +73,10 @@ impl RingBuffer {
             .filter_map(|r| r.ok())
             .filter_map(|json| serde_json::from_str(&json).ok())
             .collect();
-        debug!(count = events.len(), "Fetched pending batch from ring buffer");
+        debug!(
+            count = events.len(),
+            "Fetched pending batch from ring buffer"
+        );
         Ok(events)
     }
 
@@ -92,8 +97,10 @@ impl RingBuffer {
             placeholders
         );
         let mut stmt = inner.conn.prepare(&sql)?;
-        let params: Vec<&dyn rusqlite::ToSql> =
-            event_ids.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+        let params: Vec<&dyn rusqlite::ToSql> = event_ids
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
         stmt.execute(params.as_slice())?;
         Ok(())
     }
@@ -101,10 +108,9 @@ impl RingBuffer {
     /// Delete uploaded events (housekeeping — call periodically).
     pub fn purge_uploaded(&self) -> Result<usize> {
         let inner = self.inner.lock().unwrap();
-        let deleted = inner.conn.execute(
-            "DELETE FROM events WHERE uploaded = 1",
-            [],
-        )?;
+        let deleted = inner
+            .conn
+            .execute("DELETE FROM events WHERE uploaded = 1", [])?;
         if deleted > 0 {
             debug!(deleted, "Purged uploaded events from ring buffer");
         }
@@ -159,9 +165,16 @@ mod tests {
 
     fn make_event(id: &str) -> TelemetryEvent {
         let mut e = TelemetryEvent::new(
-            "agt_test", "ten_test", "test",
-            EventType::ProcessCreate, "host",
-            OsInfo { platform: "test".into(), version: "0".into(), arch: "x64".into() },
+            "agt_test",
+            "ten_test",
+            "test",
+            EventType::ProcessCreate,
+            "host",
+            OsInfo {
+                platform: "test".into(),
+                version: "0".into(),
+                arch: "x64".into(),
+            },
         );
         e.event_id = format!("evt_{}", id);
         e

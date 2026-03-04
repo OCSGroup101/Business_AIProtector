@@ -120,6 +120,7 @@ mod etw {
     use std::mem;
     use std::sync::mpsc;
 
+    use windows::core::{GUID, PCWSTR, PWSTR};
     use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, ERROR_SUCCESS};
     use windows::Win32::System::Diagnostics::Etw::{
         CloseTrace, EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW,
@@ -130,7 +131,6 @@ mod etw {
         OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
         PROCESS_QUERY_LIMITED_INFORMATION,
     };
-    use windows::core::{GUID, PCWSTR, PWSTR};
 
     // Provider: Microsoft-Windows-Kernel-Process {22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}
     const KERNEL_PROCESS_GUID: GUID = GUID {
@@ -154,9 +154,18 @@ mod etw {
 
     // Session name as a static UTF-16 null-terminated string — pointer lifetime is 'static
     static SESSION_NAME_W: &[u16] = &[
-        b'O' as u16, b'p' as u16, b'e' as u16, b'n' as u16,
-        b'C' as u16, b'l' as u16, b'a' as u16, b'w' as u16,
-        b'E' as u16, b'T' as u16, b'W' as u16, 0u16,
+        b'O' as u16,
+        b'p' as u16,
+        b'e' as u16,
+        b'n' as u16,
+        b'C' as u16,
+        b'l' as u16,
+        b'a' as u16,
+        b'w' as u16,
+        b'E' as u16,
+        b'T' as u16,
+        b'W' as u16,
+        0u16,
     ];
 
     /// Data extracted from a raw ETW ProcessStart/ProcessStop event.
@@ -488,14 +497,18 @@ mod etw {
 
         if raw.is_start {
             event.payload.insert("ppid".into(), json!(raw.ppid));
-            event.payload.insert("image_path".into(), json!(&raw.image_path));
+            event
+                .payload
+                .insert("image_path".into(), json!(&raw.image_path));
 
             // Derive short process name from the full path
             let process_name = std::path::Path::new(&raw.image_path)
                 .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("<unknown>");
-            event.payload.insert("process_name".into(), json!(process_name));
+            event
+                .payload
+                .insert("process_name".into(), json!(process_name));
 
             // Compute SHA-256 of the binary for IOC matching
             if let Ok(data) = std::fs::read(&raw.image_path) {
@@ -530,11 +543,17 @@ async fn run_stub(collector: ProcessCollector, publisher: EventPublisher) -> Res
 
         let mut event = collector.make_event(EventType::ProcessCreate);
         event.severity = Severity::Info;
-        event.payload.insert("process_name".into(), json!("stub.exe"));
+        event
+            .payload
+            .insert("process_name".into(), json!("stub.exe"));
         event.payload.insert("pid".into(), json!(1234u32));
         event.payload.insert("ppid".into(), json!(5678u32));
-        event.payload.insert("cmdline".into(), json!("stub.exe --test"));
-        event.payload.insert("image_path".into(), json!("C:\\stub\\stub.exe"));
+        event
+            .payload
+            .insert("cmdline".into(), json!("stub.exe --test"));
+        event
+            .payload
+            .insert("image_path".into(), json!("C:\\stub\\stub.exe"));
         event.payload.insert(
             "hash_sha256".into(),
             json!("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -567,9 +586,11 @@ fn os_version() -> String {
         std::fs::read_to_string("/etc/os-release")
             .ok()
             .and_then(|s| {
-                s.lines()
-                    .find(|l| l.starts_with("PRETTY_NAME="))
-                    .map(|l| l.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+                s.lines().find(|l| l.starts_with("PRETTY_NAME=")).map(|l| {
+                    l.trim_start_matches("PRETTY_NAME=")
+                        .trim_matches('"')
+                        .to_string()
+                })
             })
             .unwrap_or_else(|| "Linux".to_string())
     }
