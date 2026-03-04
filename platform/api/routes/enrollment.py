@@ -28,6 +28,7 @@ from .. import pki
 from ..database import AsyncSessionLocal, get_db
 from ..models.agent import Agent
 from ..models.enrollment_token import EnrollmentToken
+from ..models.policy import Policy
 
 logger = logging.getLogger(__name__)
 
@@ -198,11 +199,30 @@ async def enroll_agent(
         request.os_arch,
     )
 
+    # ── 5. Fetch default policy for this tenant ───────────────────────────────
+    policy_bundle: dict = {"version": 0, "content_toml": ""}
+    async with AsyncSessionLocal() as policy_session:
+        await policy_session.execute(
+            text(f"SET LOCAL search_path TO {schema}, public")
+        )
+        pol_result = await policy_session.execute(
+            select(Policy)
+            .where(Policy.is_default.is_(True), Policy.is_active.is_(True))
+            .order_by(Policy.version.desc())
+            .limit(1)
+        )
+        default_policy = pol_result.scalar_one_or_none()
+        if default_policy:
+            policy_bundle = {
+                "version": default_policy.version,
+                "content_toml": default_policy.content_toml,
+            }
+
     return EnrollmentResponse(
         agent_id=agent_id,
         tenant_id=tenant_id,
         client_cert_pem=client_cert_pem,
         ca_cert_pem=ca_cert_pem,
         cert_valid_seconds=cert_valid_seconds,
-        policy={"version": 1},  # Phase 2: return full TOML policy bundle
+        policy=policy_bundle,
     )

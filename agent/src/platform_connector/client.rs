@@ -64,6 +64,39 @@ pub fn build_platform_client(cfg: &AgentConfig, timeout: Duration) -> Result<Cli
     Ok(client)
 }
 
+/// Build a platform client using certs directly from a `certs/` subdirectory.
+/// Used by cert_renewal, which doesn't have access to AgentConfig.
+pub fn build_platform_client_from_dir(data_dir: &std::path::Path, timeout: Duration) -> Result<Client> {
+    let certs_dir = data_dir.join("certs");
+    let cert_path = certs_dir.join("client.pem");
+    let key_path = certs_dir.join("client.key");
+    let ca_path = certs_dir.join("ca.pem");
+
+    if !cert_path.exists() || !key_path.exists() || !ca_path.exists() {
+        return Ok(Client::builder().timeout(timeout).build()?);
+    }
+
+    let mut pem_bundle = std::fs::read(&cert_path)?;
+    pem_bundle.extend_from_slice(&std::fs::read(&key_path)?);
+
+    let identity = match Identity::from_pem(&pem_bundle) {
+        Ok(id) => id,
+        Err(e) => {
+            warn!("mTLS identity load failed ({}); falling back to plain HTTP", e);
+            return Ok(Client::builder().timeout(timeout).build()?);
+        }
+    };
+
+    let ca_pem = std::fs::read(&ca_path)?;
+    let ca_cert = Certificate::from_pem(&ca_pem)?;
+
+    Ok(Client::builder()
+        .timeout(timeout)
+        .identity(identity)
+        .add_root_certificate(ca_cert)
+        .build()?)
+}
+
 fn resolve_cert_paths(cfg: &AgentConfig) -> (PathBuf, PathBuf, PathBuf) {
     let default_dir = cfg.storage.data_dir.join("certs");
 

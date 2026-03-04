@@ -17,6 +17,7 @@ from .routes import (
     admin,
     agents,
     audit,
+    cert_renewal,
     enrollment,
     heartbeat,
     incidents,
@@ -84,6 +85,7 @@ app.add_middleware(TenantMiddleware)
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(enrollment.router, prefix="/api/v1/agents", tags=["enrollment"])
 app.include_router(heartbeat.router, prefix="/api/v1/agents", tags=["heartbeat"])
+app.include_router(cert_renewal.router, prefix="/api/v1/agents", tags=["enrollment"])
 app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetry"])
 app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["incidents"])
 app.include_router(policies.router, prefix="/api/v1/policies", tags=["policies"])

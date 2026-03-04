@@ -1,7 +1,7 @@
 """Agent heartbeat endpoint."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -12,6 +12,11 @@ from sqlalchemy import select
 from ..command_queue import pop_commands
 from ..database import get_tenant_session
 from ..models.agent import Agent
+from ..models.policy import Policy
+from .. import pki
+
+# Trigger cert renewal when less than this many seconds remain
+CERT_RENEW_THRESHOLD_SECS = 86_400  # 24 hours
 
 logger = logging.getLogger(__name__)
 
@@ -69,13 +74,32 @@ async def agent_heartbeat(
 
     await db.flush()
 
-    # Check for policy updates (Phase 2: compare versions)
-    policy_update_version: Optional[int] = None
-
-    # Drain pending commands from Redis for this agent
+    # Check if cert needs renewal (< 24 h remaining)
     raw_commands = await pop_commands(agent_id)
     commands = [PlatformCommand(type=c["type"], payload={k: v for k, v in c.items() if k != "type"})
                 for c in raw_commands]
+
+    now = datetime.now(timezone.utc)
+    if agent.cert_expires_at:
+        expires_at = agent.cert_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        secs_remaining = (expires_at - now).total_seconds()
+        if secs_remaining < CERT_RENEW_THRESHOLD_SECS:
+            commands.append(PlatformCommand(type="renew_cert", payload=None))
+            logger.info("Agent %s cert expires in %.0fs — queuing renew_cert", agent_id, secs_remaining)
+
+    # Check for policy updates — compare agent's policy_version vs current default
+    policy_update_version: Optional[int] = None
+    pol_result = await db.execute(
+        select(Policy)
+        .where(Policy.is_default.is_(True), Policy.is_active.is_(True))
+        .order_by(Policy.version.desc())
+        .limit(1)
+    )
+    current_policy = pol_result.scalar_one_or_none()
+    if current_policy and current_policy.version > request.policy_version:
+        policy_update_version = current_policy.version
 
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
