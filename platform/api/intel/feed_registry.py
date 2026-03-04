@@ -6,7 +6,7 @@ All feed loops write here; the /api/v1/intel/feeds route reads from here.
 Asyncio-safe: all writes happen from the same event loop.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 

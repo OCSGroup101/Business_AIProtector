@@ -59,15 +59,21 @@ impl NetworkCollector {
 
     fn make_event(&self, event_type: EventType) -> TelemetryEvent {
         TelemetryEvent::new(
-            &self.agent_id, &self.tenant_id, "network",
-            event_type, &self.hostname, self.os_info.clone(),
+            &self.agent_id,
+            &self.tenant_id,
+            "network",
+            event_type,
+            &self.hostname,
+            self.os_info.clone(),
         )
     }
 }
 
 #[async_trait]
 impl Collector for NetworkCollector {
-    fn name(&self) -> &'static str { "network" }
+    fn name(&self) -> &'static str {
+        "network"
+    }
 
     async fn run(self: Box<Self>, publisher: EventPublisher) -> Result<()> {
         info!(capture_dns = self.capture_dns, "NetworkCollector starting");
@@ -83,10 +89,14 @@ impl Collector for NetworkCollector {
             // Emit an event for every new connection not seen in the previous poll
             for conn in current.difference(&prev_conns) {
                 let mut event = self.make_event(EventType::NetworkConnect);
-                event.payload.insert("src_ip".into(),   json!(conn.src));
-                event.payload.insert("src_port".into(), json!(conn.src_port));
-                event.payload.insert("dst_ip".into(),   json!(conn.dst));
-                event.payload.insert("dst_port".into(), json!(conn.dst_port));
+                event.payload.insert("src_ip".into(), json!(conn.src));
+                event
+                    .payload
+                    .insert("src_port".into(), json!(conn.src_port));
+                event.payload.insert("dst_ip".into(), json!(conn.dst));
+                event
+                    .payload
+                    .insert("dst_port".into(), json!(conn.dst_port));
                 event.payload.insert("protocol".into(), json!("TCP"));
                 debug!(dst = %conn.dst, port = conn.dst_port, "New TCP connection");
                 publisher.publish(event);
@@ -122,8 +132,8 @@ mod linux {
 
     pub fn sample() -> HashSet<ConnKey> {
         let mut conns = HashSet::new();
-        parse_proc_net("/proc/net/tcp",  false, &mut conns);
-        parse_proc_net("/proc/net/tcp6", true,  &mut conns);
+        parse_proc_net("/proc/net/tcp", false, &mut conns);
+        parse_proc_net("/proc/net/tcp6", true, &mut conns);
         conns
     }
 
@@ -135,17 +145,28 @@ mod linux {
         // Header line is skipped
         for line in content.lines().skip(1) {
             let cols: Vec<&str> = line.split_whitespace().collect();
-            if cols.len() < 4 { continue; }
+            if cols.len() < 4 {
+                continue;
+            }
             // Column 3 is TCP state; "01" = TCP_ESTABLISHED
-            if cols[3] != "01" { continue; }
+            if cols[3] != "01" {
+                continue;
+            }
 
             let src = parse_addr(cols[1], is_v6);
             let dst = parse_addr(cols[2], is_v6);
 
             if let (Some((src_ip, src_port)), Some((dst_ip, dst_port))) = (src, dst) {
                 // Skip loopback destinations — reduces noise from IPC traffic
-                if dst_ip.starts_with("127.") || dst_ip == "::1" { continue; }
-                out.insert(ConnKey { src: src_ip, src_port, dst: dst_ip, dst_port });
+                if dst_ip.starts_with("127.") || dst_ip == "::1" {
+                    continue;
+                }
+                out.insert(ConnKey {
+                    src: src_ip,
+                    src_port,
+                    dst: dst_ip,
+                    dst_port,
+                });
             }
         }
     }
@@ -240,21 +261,27 @@ mod windows {
 
             for i in 0..num_entries {
                 let start = base + i * row_size;
-                let end   = start + row_size;
-                if end > buf.len() { break; }
+                let end = start + row_size;
+                if end > buf.len() {
+                    break;
+                }
 
                 let row: MIB_TCPROW_OWNER_PID =
                     std::ptr::read_unaligned(buf[start..end].as_ptr() as *const _);
 
                 // dwState 5 == MIB_TCP_STATE_ESTAB
-                if row.dwState != 5 { continue; }
+                if row.dwState != 5 {
+                    continue;
+                }
 
-                let src_ip   = Ipv4Addr::from(u32::from_be(row.dwLocalAddr));
-                let dst_ip   = Ipv4Addr::from(u32::from_be(row.dwRemoteAddr));
+                let src_ip = Ipv4Addr::from(u32::from_be(row.dwLocalAddr));
+                let dst_ip = Ipv4Addr::from(u32::from_be(row.dwRemoteAddr));
                 let src_port = u16::from_be(row.dwLocalPort as u16);
                 let dst_port = u16::from_be(row.dwRemotePort as u16);
 
-                if dst_ip.is_loopback() { continue; }
+                if dst_ip.is_loopback() {
+                    continue;
+                }
 
                 conns.insert(ConnKey {
                     src: src_ip.to_string(),

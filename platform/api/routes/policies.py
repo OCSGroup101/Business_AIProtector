@@ -55,7 +55,7 @@ async def list_policies(
     db: AsyncSession = Depends(get_db),
     _role=Depends(require_permission(Permission.POLICIES_READ)),
 ) -> list[PolicySummary]:
-    result = await db.execute(select(Policy).where(Policy.is_active == True))
+    result = await db.execute(select(Policy).where(Policy.is_active.is_(True)))
     return [
         PolicySummary(
             id=p.id, name=p.name, version=p.version,
@@ -73,7 +73,7 @@ async def list_policy_rules(
     _role=Depends(require_permission(Permission.POLICIES_READ)),
 ) -> list[DetectionRuleResponse]:
     """Return detection rules from a policy's TOML, merged with per-rule overrides."""
-    result = await db.execute(select(Policy).where(Policy.id == policy_id, Policy.is_active == True))
+    result = await db.execute(select(Policy).where(Policy.id == policy_id, Policy.is_active.is_(True)))
     policy = result.scalar_one_or_none()
     if not policy:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
@@ -109,7 +109,7 @@ async def update_policy_rule(
     _role=Depends(require_permission(Permission.POLICIES_WRITE)),
 ) -> DetectionRuleResponse:
     """Enable or disable a single detection rule within a policy."""
-    result = await db.execute(select(Policy).where(Policy.id == policy_id, Policy.is_active == True))
+    result = await db.execute(select(Policy).where(Policy.id == policy_id, Policy.is_active.is_(True)))
     policy = result.scalar_one_or_none()
     if not policy:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")

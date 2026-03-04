@@ -127,7 +127,10 @@ impl PolicySync {
         // Phase 2: verify minisign Ed25519 signature before applying.
         // For now, log a warning in debug builds and proceed.
         #[cfg(debug_assertions)]
-        tracing::debug!(version = bundle.version, "Policy signature verification skipped in debug build");
+        tracing::debug!(
+            version = bundle.version,
+            "Policy signature verification skipped in debug build"
+        );
 
         self.handle
             .update(LivePolicy {

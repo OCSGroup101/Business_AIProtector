@@ -17,7 +17,6 @@ best-effort delivery of operational commands.
 import json
 import logging
 import os
-from typing import Optional
 
 import redis.asyncio as aioredis
 

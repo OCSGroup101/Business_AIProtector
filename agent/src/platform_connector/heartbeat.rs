@@ -49,8 +49,13 @@ enum PlatformCommand {
     Isolate,
     LiftIsolation,
     RenewCert,
-    UpdateAgent { version: String, manifest_url: String },
-    PullIntelBundle { bundle_id: String },
+    UpdateAgent {
+        version: String,
+        manifest_url: String,
+    },
+    PullIntelBundle {
+        bundle_id: String,
+    },
 }
 
 pub struct HeartbeatService {
@@ -83,7 +88,10 @@ impl HeartbeatService {
     }
 
     pub async fn run(self) -> Result<()> {
-        info!(interval_secs = self.interval.as_secs(), "Heartbeat service starting");
+        info!(
+            interval_secs = self.interval.as_secs(),
+            "Heartbeat service starting"
+        );
         let mut ticker = tokio::time::interval(self.interval);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -112,8 +120,12 @@ impl HeartbeatService {
             },
         };
 
-        let response = self.client
-            .post(format!("{}/api/v1/agents/{}/heartbeat", self.platform_url, self.agent_id))
+        let response = self
+            .client
+            .post(format!(
+                "{}/api/v1/agents/{}/heartbeat",
+                self.platform_url, self.agent_id
+            ))
             .json(&request)
             .send()
             .await?;
@@ -162,7 +174,10 @@ impl HeartbeatService {
                     warn!(error = %e, "Certificate renewal failed");
                 }
             }
-            PlatformCommand::UpdateAgent { version, manifest_url } => {
+            PlatformCommand::UpdateAgent {
+                version,
+                manifest_url,
+            } => {
                 info!(version = %version, "Platform command: UPDATE_AGENT");
             }
             PlatformCommand::PullIntelBundle { bundle_id } => {

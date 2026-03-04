@@ -13,13 +13,25 @@ fn bench_behavioral_rule_eval(c: &mut Criterion) {
 
     let event = {
         let mut e = TelemetryEvent::new(
-            "agt_bench", "ten_bench", "process",
-            EventType::ProcessCreate, "bench-host",
-            OsInfo { platform: "windows".into(), version: "10.0".into(), arch: "x86_64".into() },
+            "agt_bench",
+            "ten_bench",
+            "process",
+            EventType::ProcessCreate,
+            "bench-host",
+            OsInfo {
+                platform: "windows".into(),
+                version: "10.0".into(),
+                arch: "x86_64".into(),
+            },
         );
-        e.payload.insert("process_name".into(), serde_json::json!("powershell.exe"));
-        e.payload.insert("parent_name".into(), serde_json::json!("winword.exe"));
-        e.payload.insert("cmdline".into(), serde_json::json!("powershell.exe -enc ABCDEF"));
+        e.payload
+            .insert("process_name".into(), serde_json::json!("powershell.exe"));
+        e.payload
+            .insert("parent_name".into(), serde_json::json!("winword.exe"));
+        e.payload.insert(
+            "cmdline".into(),
+            serde_json::json!("powershell.exe -enc ABCDEF"),
+        );
         e
     };
 
@@ -29,8 +41,16 @@ fn bench_behavioral_rule_eval(c: &mut Criterion) {
     group.bench_function("behavioral_rule_two_conditions", |b| {
         b.iter(|| {
             // Simulate two condition checks
-            let p_name = event.payload.get("process_name").and_then(|v| v.as_str()).unwrap_or("");
-            let parent = event.payload.get("parent_name").and_then(|v| v.as_str()).unwrap_or("");
+            let p_name = event
+                .payload
+                .get("process_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let parent = event
+                .payload
+                .get("parent_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let match1 = ["winword.exe", "excel.exe"].contains(&parent);
             let match2 = ["powershell.exe", "cmd.exe"].contains(&p_name);
             black_box(match1 && match2)
@@ -49,7 +69,10 @@ fn bench_ioc_lookup(c: &mut Criterion) {
 
     // Seed 100,000 IOCs
     let hashes: Vec<String> = (0..100_000).map(|i| format!("{:064x}", i)).collect();
-    let iocs: Vec<(&str, &str, &str)> = hashes.iter().map(|h| ("file_hash", h.as_str(), r#"{"confidence":0.9}"#)).collect();
+    let iocs: Vec<(&str, &str, &str)> = hashes
+        .iter()
+        .map(|h| ("file_hash", h.as_str(), r#"{"confidence":0.9}"#))
+        .collect();
     store.bulk_insert(iocs.into_iter()).unwrap();
 
     let known_hash = format!("{:064x}", 50_000);

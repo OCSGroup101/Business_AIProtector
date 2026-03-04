@@ -7,7 +7,6 @@ Permission enforcement via FastAPI dependencies.
 
 import os
 from enum import Enum
-from functools import wraps
 from typing import Callable, Optional
 
 from fastapi import Depends, HTTPException, Request, status

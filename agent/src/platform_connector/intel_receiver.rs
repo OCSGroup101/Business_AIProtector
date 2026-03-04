@@ -23,7 +23,7 @@ const DEFAULT_POLL_INTERVAL_SECS: u64 = 300; // 5 minutes
 
 #[derive(Deserialize)]
 struct BundleRecord {
-    action: String,         // "upsert" | "delete"
+    action: String, // "upsert" | "delete"
     #[serde(rename = "type")]
     ioc_type: String,
     value: String,
@@ -106,10 +106,7 @@ impl IntelReceiver {
         let response = req.send().await?;
 
         if !response.status().is_success() {
-            anyhow::bail!(
-                "IOC bundle request failed: HTTP {}",
-                response.status()
-            );
+            anyhow::bail!("IOC bundle request failed: HTTP {}", response.status());
         }
 
         let body = response.text().await?;
@@ -137,11 +134,7 @@ impl IntelReceiver {
                         "metadata": record.metadata,
                     });
                     // Collect owned strings; borrow them below
-                    upserts.push((
-                        record.ioc_type,
-                        record.value,
-                        meta.to_string(),
-                    ));
+                    upserts.push((record.ioc_type, record.value, meta.to_string()));
                 }
                 "delete" => {
                     if let Err(e) = self.ioc_store.remove(&record.ioc_type, &record.value) {

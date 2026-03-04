@@ -59,7 +59,12 @@ impl IocStore {
     pub fn insert(&self, ioc_type: &str, value: &str, metadata: &str) -> Result<()> {
         let key = format!("{}:{}", ioc_type, value.to_lowercase());
         let mut txn = self.env.begin_rw_txn()?;
-        txn.put(self.db, &key.as_bytes(), &metadata.as_bytes(), WriteFlags::empty())?;
+        txn.put(
+            self.db,
+            &key.as_bytes(),
+            &metadata.as_bytes(),
+            WriteFlags::empty(),
+        )?;
         txn.commit()?;
         Ok(())
     }
@@ -74,7 +79,12 @@ impl IocStore {
         let mut count = 0;
         for (ioc_type, value, metadata) in iocs {
             let key = format!("{}:{}", ioc_type, value.to_lowercase());
-            txn.put(self.db, &key.as_bytes(), &metadata.as_bytes(), WriteFlags::empty())?;
+            txn.put(
+                self.db,
+                &key.as_bytes(),
+                &metadata.as_bytes(),
+                WriteFlags::empty(),
+            )?;
             count += 1;
         }
         txn.commit()?;
@@ -87,8 +97,11 @@ impl IocStore {
         let key = format!("{}:{}", ioc_type, value.to_lowercase());
         let mut txn = self.env.begin_rw_txn()?;
         match txn.del(self.db, &key.as_bytes(), None) {
-            Ok(()) => { txn.commit()?; Ok(true) }
-            Err(lmdb_rkv::Error::NotFound) => { Ok(false) }
+            Ok(()) => {
+                txn.commit()?;
+                Ok(true)
+            }
+            Err(lmdb_rkv::Error::NotFound) => Ok(false),
             Err(e) => Err(e.into()),
         }
     }
@@ -116,7 +129,13 @@ mod tests {
         let store = IocStore::open(dir.path()).unwrap();
 
         let hash = "abc123def456abc123def456abc123def456abc123def456abc123def456abcd";
-        store.insert("file_hash", hash, r#"{"confidence":0.95,"source":"malwarebazaar"}"#).unwrap();
+        store
+            .insert(
+                "file_hash",
+                hash,
+                r#"{"confidence":0.95,"source":"malwarebazaar"}"#,
+            )
+            .unwrap();
 
         assert!(store.contains("file_hash", hash));
         assert!(!store.contains("file_hash", "nonexistent"));
@@ -145,9 +164,7 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let store = IocStore::open(dir.path()).unwrap();
 
-        let hashes: Vec<String> = (0..10_000)
-            .map(|i| format!("{:064x}", i))
-            .collect();
+        let hashes: Vec<String> = (0..10_000).map(|i| format!("{:064x}", i)).collect();
 
         let iocs: Vec<(&str, &str, &str)> = hashes
             .iter()
@@ -160,6 +177,10 @@ mod tests {
 
         assert_eq!(count, 10_000);
         // Bulk insert of 10K IOCs should be fast
-        assert!(elapsed.as_millis() < 5_000, "Bulk insert too slow: {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() < 5_000,
+            "Bulk insert too slow: {:?}",
+            elapsed
+        );
     }
 }
