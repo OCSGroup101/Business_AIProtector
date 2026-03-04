@@ -1,0 +1,64 @@
+name: CodeQL Security Analysis
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Run weekly on Wednesday at 03:00 UTC to catch newly-discovered vulnerabilities
+    # even when no code changes have occurred.
+    - cron: "0 3 * * 3"
+
+# Minimal permissions — CodeQL only needs to read code and write security events
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL — ${{ matrix.language }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Python analysis covers the FastAPI platform API
+          - language: python
+            os: ubuntu-latest
+          # JavaScript/TypeScript analysis covers the Next.js console
+          - language: javascript-typescript
+            os: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Use the extended security suite: includes OWASP top 10, CWE-top-25
+          queries: security-extended,security-and-quality
+
+      # Python: no build step needed for CodeQL
+      # JavaScript/TypeScript: autobuild handles npm install + compile
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          # Results are uploaded to the Security tab automatically
+          # and will block merges if branch protection requires code scanning
+          upload: true
+
+  # Rust is not yet supported by CodeQL; cargo-audit covers dependency CVEs.
+  # Full Rust static analysis via Clippy is in ci.yml Stage 1.
+  # RUDRA / Miri analysis is planned for Phase 2 (unsafe code audit).

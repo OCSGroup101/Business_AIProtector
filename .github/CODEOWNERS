@@ -1,0 +1,63 @@
+# OpenClaw CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Rules are evaluated bottom-up; the last matching rule wins.
+# Ensure all listed teams exist in the OCSGroup101 GitHub org before enabling
+# branch-protection enforcement.
+#
+# Team name → role mapping (create these in GitHub org settings):
+#   @OCSGroup101/maintainers        — core project leads; approve any change
+#   @OCSGroup101/security           — security architect; required for auth/crypto/isolation
+#   @OCSGroup101/endpoint-eng       — Rust agent team
+#   @OCSGroup101/platform-eng       — FastAPI / database team
+#   @OCSGroup101/detection-eng      — detection rules and intel feeds
+#   @OCSGroup101/ux-eng             — Next.js console
+#   @OCSGroup101/devops             — CI/CD, containers, infra
+
+# ─── Global fallback — maintainers are notified on everything ─────────────────
+*                                           @OCSGroup101/maintainers
+
+# ─── Agent (Rust) ─────────────────────────────────────────────────────────────
+/agent/**                                   @OCSGroup101/endpoint-eng @OCSGroup101/security
+
+# Security-critical agent paths — Security Architect mandatory
+/agent/src/platform_connector/client.rs     @OCSGroup101/security
+/agent/src/platform_connector/enrollment.rs @OCSGroup101/security
+/agent/src/containment/**                   @OCSGroup101/security @OCSGroup101/endpoint-eng
+/agent/src/detection/**                     @OCSGroup101/detection-eng @OCSGroup101/security
+
+# ─── Platform API ─────────────────────────────────────────────────────────────
+/platform/api/**                            @OCSGroup101/platform-eng @OCSGroup101/security
+
+# Tenant isolation and auth middleware — Security Architect mandatory
+/platform/api/middleware/**                 @OCSGroup101/security
+/platform/api/database.py                   @OCSGroup101/security @OCSGroup101/platform-eng
+/platform/api/routes/enrollment.py          @OCSGroup101/security
+/platform/api/tests/isolation/**            @OCSGroup101/security @OCSGroup101/platform-eng
+
+# ─── Console ──────────────────────────────────────────────────────────────────
+/platform/console/**                        @OCSGroup101/ux-eng
+
+# ─── Detection rules and intelligence feeds ───────────────────────────────────
+/intelligence/**                            @OCSGroup101/detection-eng @OCSGroup101/security
+/platform/api/intel/**                      @OCSGroup101/detection-eng @OCSGroup101/security
+
+# ─── Documentation and community health files ─────────────────────────────────
+/docs/**                                    @OCSGroup101/maintainers
+/SECURITY.md                                @OCSGroup101/security @OCSGroup101/maintainers
+/docs/threat-model/**                       @OCSGroup101/security
+
+# ─── Infrastructure / supply chain (highest-risk path) ───────────────────────
+/.github/**                                 @OCSGroup101/devops @OCSGroup101/security
+/.github/CODEOWNERS                         @OCSGroup101/security @OCSGroup101/maintainers
+/.github/workflows/**                       @OCSGroup101/devops @OCSGroup101/security
+/docker-compose.yml                         @OCSGroup101/devops @OCSGroup101/platform-eng
+/Makefile                                   @OCSGroup101/devops @OCSGroup101/maintainers
+
+# ─── Dependency manifests (supply-chain) ──────────────────────────────────────
+/agent/Cargo.toml                           @OCSGroup101/endpoint-eng @OCSGroup101/security
+/agent/Cargo.lock                           @OCSGroup101/endpoint-eng @OCSGroup101/security
+/platform/api/requirements.txt              @OCSGroup101/platform-eng @OCSGroup101/security
+/platform/api/requirements-dev.txt          @OCSGroup101/platform-eng
+/platform/console/package.json              @OCSGroup101/ux-eng @OCSGroup101/security
+/platform/console/package-lock.json         @OCSGroup101/ux-eng @OCSGroup101/security

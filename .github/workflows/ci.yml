@@ -12,10 +12,13 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  # Minimum scope for PR validation jobs (Stages 0–6, 9).
+  # Stage 7 (sign-containers) and Stage 8 (attest-sbom) override to add
+  # id-token: write and packages: write via per-job permissions blocks.
+  # Keeping these out of the global scope prevents fork PRs from acquiring
+  # container registry or OIDC token permissions.
   contents: read
   security-events: write
-  id-token: write   # For Sigstore keyless signing (Stage 7)
-  packages: write
 
 env:
   RUST_VERSION: "1.77"
@@ -342,7 +345,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy config scan (docker-compose)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: "config"
           scan-ref: "docker-compose.yml"

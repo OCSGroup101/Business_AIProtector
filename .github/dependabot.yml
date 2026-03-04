@@ -1,0 +1,94 @@
+version: 2
+
+updates:
+  # ─── Rust (Cargo) ─────────────────────────────────────────────────────────
+  - package-ecosystem: "cargo"
+    directory: "/agent"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependency"
+      - "rust"
+    commit-message:
+      prefix: "chore(deps)"
+    reviewers:
+      - "OCSGroup101/endpoint-eng"
+      - "OCSGroup101/security"
+    groups:
+      # Batch patch updates together to reduce PR noise
+      rust-patch-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+
+  # ─── Python (pip) ─────────────────────────────────────────────────────────
+  - package-ecosystem: "pip"
+    directory: "/platform/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependency"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+    reviewers:
+      - "OCSGroup101/platform-eng"
+      - "OCSGroup101/security"
+    groups:
+      python-patch-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+
+  # ─── Node.js (npm) ────────────────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/platform/console"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependency"
+      - "nodejs"
+    commit-message:
+      prefix: "chore(deps)"
+    reviewers:
+      - "OCSGroup101/ux-eng"
+    groups:
+      node-patch-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+      node-dev-updates:
+        applies-to: version-updates
+        dependency-type: "development"
+
+  # ─── GitHub Actions ────────────────────────────────────────────────────────
+  # Dependabot keeps action versions pinned and up-to-date.
+  # Pair with SHA-pinned references in workflows for full supply-chain control.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependency"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(deps)"
+    reviewers:
+      - "OCSGroup101/devops"
+      - "OCSGroup101/security"
