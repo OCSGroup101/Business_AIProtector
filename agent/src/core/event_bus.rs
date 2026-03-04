@@ -192,10 +192,7 @@ impl EventPublisher {
     /// Returns the number of receivers that received the event.
     /// Returns 0 (not an error) if there are no active subscribers.
     pub fn publish(&self, event: TelemetryEvent) -> usize {
-        match self.sender.send(event) {
-            Ok(n) => n,
-            Err(_) => 0, // No receivers — not an error at startup
-        }
+        self.sender.send(event).unwrap_or_default()
     }
 }
 

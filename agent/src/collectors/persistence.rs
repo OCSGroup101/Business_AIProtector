@@ -205,9 +205,8 @@ fn platform_persistence_paths() -> Vec<PathBuf> {
 
 /// Returns true for filesystem noise that should not produce events.
 fn is_noise_path(path: &std::path::Path) -> bool {
-    path.to_string_lossy()
-        .ends_with(|c: char| c == '~' || c == '#')
-        || path.extension().map_or(false, |e| e == "swp" || e == "tmp")
+    path.to_string_lossy().ends_with(['~', '#'])
+        || path.extension().is_some_and(|e| e == "swp" || e == "tmp")
 }
 
 /// Classify the persistence mechanism from the path for event context.
