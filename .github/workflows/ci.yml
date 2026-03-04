@@ -138,11 +138,11 @@ jobs:
         run: semgrep --config=p/python --config=p/typescript --config=p/owasp-top-ten platform/ --json -o semgrep-report.json
         continue-on-error: false
 
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
       - name: cargo-audit (Rust)
-        uses: rustsec/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: agent/
+        run: cargo audit --file agent/Cargo.lock
 
       - name: Upload SAST reports
         uses: actions/upload-artifact@v4

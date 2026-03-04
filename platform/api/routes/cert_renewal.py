@@ -26,6 +26,7 @@ router = APIRouter()
 
 # ─── Cert renewal ─────────────────────────────────────────────────────────────
 
+
 class CertRenewalRequest(BaseModel):
     csr_pem: str
 
@@ -48,10 +49,14 @@ async def renew_agent_cert(
     The agent sends a new CSR; the platform signs it and returns the
     new cert + CA.  The old cert remains valid until it expires.
     """
-    result = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.is_active.is_(True)))
+    result = await db.execute(
+        select(Agent).where(Agent.id == agent_id, Agent.is_active.is_(True))
+    )
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     try:
         client_cert_pem, ca_cert_pem, cert_serial, cert_expires_at = pki.sign_agent_csr(
@@ -59,7 +64,10 @@ async def renew_agent_cert(
             agent_id=agent_id,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"CSR validation failed: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"CSR validation failed: {exc}",
+        )
 
     now = datetime.now(timezone.utc)
     agent.cert_serial = cert_serial
@@ -68,7 +76,12 @@ async def renew_agent_cert(
     await db.flush()
 
     cert_valid_seconds = int((cert_expires_at - now).total_seconds())
-    logger.info("Cert renewed for agent %s (serial %s, expires in %ds)", agent_id, cert_serial, cert_valid_seconds)
+    logger.info(
+        "Cert renewed for agent %s (serial %s, expires in %ds)",
+        agent_id,
+        cert_serial,
+        cert_valid_seconds,
+    )
 
     return CertRenewalResponse(
         client_cert_pem=client_cert_pem,
@@ -78,6 +91,7 @@ async def renew_agent_cert(
 
 
 # ─── Agent policy fetch ───────────────────────────────────────────────────────
+
 
 class AgentPolicyResponse(BaseModel):
     version: int
@@ -95,10 +109,14 @@ async def get_agent_policy(
     Called by the agent when the heartbeat response indicates a new
     policy version is available.
     """
-    result = await db.execute(select(Agent).where(Agent.id == agent_id, Agent.is_active.is_(True)))
+    result = await db.execute(
+        select(Agent).where(Agent.id == agent_id, Agent.is_active.is_(True))
+    )
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     pol_result = await db.execute(
         select(Policy)
@@ -108,7 +126,10 @@ async def get_agent_policy(
     )
     policy = pol_result.scalar_one_or_none()
     if not policy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No default policy configured for this tenant")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No default policy configured for this tenant",
+        )
 
     # Track which policy version the agent is now on
     agent.policy_id = policy.id

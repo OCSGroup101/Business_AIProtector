@@ -58,8 +58,11 @@ async def list_policies(
     result = await db.execute(select(Policy).where(Policy.is_active.is_(True)))
     return [
         PolicySummary(
-            id=p.id, name=p.name, version=p.version,
-            is_default=p.is_default, agent_count=p.agent_count,
+            id=p.id,
+            name=p.name,
+            version=p.version,
+            is_default=p.is_default,
+            agent_count=p.agent_count,
             created_at=p.created_at,
         )
         for p in result.scalars()
@@ -73,30 +76,39 @@ async def list_policy_rules(
     _role=Depends(require_permission(Permission.POLICIES_READ)),
 ) -> list[DetectionRuleResponse]:
     """Return detection rules from a policy's TOML, merged with per-rule overrides."""
-    result = await db.execute(select(Policy).where(Policy.id == policy_id, Policy.is_active.is_(True)))
+    result = await db.execute(
+        select(Policy).where(Policy.id == policy_id, Policy.is_active.is_(True))
+    )
     policy = result.scalar_one_or_none()
     if not policy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found"
+        )
 
     try:
         parsed: dict[str, Any] = tomllib.loads(policy.content_toml)
     except tomllib.TOMLDecodeError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Invalid policy TOML: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid policy TOML: {exc}",
+        )
 
     rules: list[DetectionRuleResponse] = []
     for raw in parsed.get("rules", []):
         rule_id: str = raw.get("rule_id", "")
         override = policy.rule_overrides.get(rule_id, {})
         enabled = override.get("enabled", raw.get("match", {}).get("enabled", True))
-        rules.append(DetectionRuleResponse(
-            id=f"{policy_id}:{rule_id}",
-            rule_id=rule_id,
-            name=raw.get("name", rule_id),
-            enabled=enabled,
-            severity=raw.get("severity", "medium"),
-            mitre_techniques=raw.get("mitre_techniques", []),
-            match_type=raw.get("match", {}).get("type", "behavioral"),
-        ))
+        rules.append(
+            DetectionRuleResponse(
+                id=f"{policy_id}:{rule_id}",
+                rule_id=rule_id,
+                name=raw.get("name", rule_id),
+                enabled=enabled,
+                severity=raw.get("severity", "medium"),
+                mitre_techniques=raw.get("mitre_techniques", []),
+                match_type=raw.get("match", {}).get("type", "behavioral"),
+            )
+        )
     return rules
 
 
@@ -109,19 +121,30 @@ async def update_policy_rule(
     _role=Depends(require_permission(Permission.POLICIES_WRITE)),
 ) -> DetectionRuleResponse:
     """Enable or disable a single detection rule within a policy."""
-    result = await db.execute(select(Policy).where(Policy.id == policy_id, Policy.is_active.is_(True)))
+    result = await db.execute(
+        select(Policy).where(Policy.id == policy_id, Policy.is_active.is_(True))
+    )
     policy = result.scalar_one_or_none()
     if not policy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Policy not found"
+        )
 
     try:
         parsed: dict[str, Any] = tomllib.loads(policy.content_toml)
     except tomllib.TOMLDecodeError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Invalid policy TOML: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid policy TOML: {exc}",
+        )
 
-    raw_rule = next((r for r in parsed.get("rules", []) if r.get("rule_id") == rule_id), None)
+    raw_rule = next(
+        (r for r in parsed.get("rules", []) if r.get("rule_id") == rule_id), None
+    )
     if not raw_rule:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found in policy")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found in policy"
+        )
 
     overrides: dict = dict(policy.rule_overrides)
     overrides[rule_id] = {"enabled": request.enabled}
@@ -129,7 +152,9 @@ async def update_policy_rule(
     policy.updated_at = datetime.utcnow()
     await db.flush()
 
-    logger.info("Rule %s in policy %s set enabled=%s", rule_id, policy_id, request.enabled)
+    logger.info(
+        "Rule %s in policy %s set enabled=%s", rule_id, policy_id, request.enabled
+    )
     return DetectionRuleResponse(
         id=f"{policy_id}:{rule_id}",
         rule_id=rule_id,
@@ -162,7 +187,10 @@ async def create_policy(
     await db.flush()
     logger.info("Policy created: %s (%s)", policy.id, policy.name)
     return PolicySummary(
-        id=policy.id, name=policy.name, version=policy.version,
-        is_default=policy.is_default, agent_count=0,
+        id=policy.id,
+        name=policy.name,
+        version=policy.version,
+        is_default=policy.is_default,
+        agent_count=0,
         created_at=policy.created_at,
     )

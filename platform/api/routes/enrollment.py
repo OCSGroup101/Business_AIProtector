@@ -202,9 +202,7 @@ async def enroll_agent(
     # ── 5. Fetch default policy for this tenant ───────────────────────────────
     policy_bundle: dict = {"version": 0, "content_toml": ""}
     async with AsyncSessionLocal() as policy_session:
-        await policy_session.execute(
-            text(f"SET LOCAL search_path TO {schema}, public")
-        )
+        await policy_session.execute(text(f"SET LOCAL search_path TO {schema}, public"))
         pol_result = await policy_session.execute(
             select(Policy)
             .where(Policy.is_default.is_(True), Policy.is_active.is_(True))

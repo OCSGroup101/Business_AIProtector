@@ -24,15 +24,22 @@ TEST_TENANT_ID = os.environ.get("TEST_TENANT_ID", "dev")
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-def _generate_csr(hostname: str = "test-agent.local") -> tuple[str, ec.EllipticCurvePrivateKey]:
+
+def _generate_csr(
+    hostname: str = "test-agent.local",
+) -> tuple[str, ec.EllipticCurvePrivateKey]:
     """Generate a minimal ECDSA P-256 CSR for testing."""
     key = ec.generate_private_key(ec.SECP256R1())
     csr = (
         x509.CertificateSigningRequestBuilder()
-        .subject_name(x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, hostname),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "OpenClaw Agent"),
-        ]))
+        .subject_name(
+            x509.Name(
+                [
+                    x509.NameAttribute(NameOID.COMMON_NAME, hostname),
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "OpenClaw Agent"),
+                ]
+            )
+        )
         .add_extension(
             x509.SubjectAlternativeName([x509.DNSName(hostname)]),
             critical=False,
@@ -65,6 +72,7 @@ def _create_enrollment_token(client: httpx.Client, max_uses: int = 1) -> str:
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def http():
     with httpx.Client(base_url=PLATFORM_URL, timeout=10) as client:
@@ -73,21 +81,25 @@ def http():
 
 # ─── Tests ────────────────────────────────────────────────────────────────────
 
+
 class TestEnrollment:
     def test_enrollment_success(self, http: httpx.Client):
         """Valid token + valid CSR → agent created, cert returned."""
         token = _create_enrollment_token(http)
         csr_pem, _ = _generate_csr()
 
-        resp = http.post("/api/v1/agents/enroll", json={
-            "token": token,
-            "hostname": "test-agent.local",
-            "os_platform": "linux",
-            "os_version": "Ubuntu 24.04",
-            "os_arch": "x86_64",
-            "agent_version": "0.1.0",
-            "csr_pem": csr_pem,
-        })
+        resp = http.post(
+            "/api/v1/agents/enroll",
+            json={
+                "token": token,
+                "hostname": "test-agent.local",
+                "os_platform": "linux",
+                "os_version": "Ubuntu 24.04",
+                "os_arch": "x86_64",
+                "agent_version": "0.1.0",
+                "csr_pem": csr_pem,
+            },
+        )
 
         assert resp.status_code == 201, resp.text
         data = resp.json()
@@ -101,15 +113,18 @@ class TestEnrollment:
     def test_enrollment_invalid_token(self, http: httpx.Client):
         """Invalid token → 401."""
         csr_pem, _ = _generate_csr()
-        resp = http.post("/api/v1/agents/enroll", json={
-            "token": "not-a-real-token",
-            "hostname": "test-agent.local",
-            "os_platform": "linux",
-            "os_version": "Ubuntu 24.04",
-            "os_arch": "x86_64",
-            "agent_version": "0.1.0",
-            "csr_pem": csr_pem,
-        })
+        resp = http.post(
+            "/api/v1/agents/enroll",
+            json={
+                "token": "not-a-real-token",
+                "hostname": "test-agent.local",
+                "os_platform": "linux",
+                "os_version": "Ubuntu 24.04",
+                "os_arch": "x86_64",
+                "agent_version": "0.1.0",
+                "csr_pem": csr_pem,
+            },
+        )
         assert resp.status_code == 401
 
     def test_enrollment_token_single_use(self, http: httpx.Client):
@@ -138,15 +153,18 @@ class TestEnrollment:
     def test_enrollment_invalid_csr(self, http: httpx.Client):
         """Malformed CSR PEM → 400."""
         token = _create_enrollment_token(http)
-        resp = http.post("/api/v1/agents/enroll", json={
-            "token": token,
-            "hostname": "test-agent.local",
-            "os_platform": "linux",
-            "os_version": "Ubuntu 24.04",
-            "os_arch": "x86_64",
-            "agent_version": "0.1.0",
-            "csr_pem": "not-a-pem",
-        })
+        resp = http.post(
+            "/api/v1/agents/enroll",
+            json={
+                "token": token,
+                "hostname": "test-agent.local",
+                "os_platform": "linux",
+                "os_version": "Ubuntu 24.04",
+                "os_arch": "x86_64",
+                "agent_version": "0.1.0",
+                "csr_pem": "not-a-pem",
+            },
+        )
         assert resp.status_code == 400
 
     def test_enrollment_cert_is_client_auth(self, http: httpx.Client):
@@ -154,15 +172,18 @@ class TestEnrollment:
         token = _create_enrollment_token(http)
         csr_pem, _ = _generate_csr()
 
-        resp = http.post("/api/v1/agents/enroll", json={
-            "token": token,
-            "hostname": "test-agent.local",
-            "os_platform": "linux",
-            "os_version": "Ubuntu 24.04",
-            "os_arch": "x86_64",
-            "agent_version": "0.1.0",
-            "csr_pem": csr_pem,
-        })
+        resp = http.post(
+            "/api/v1/agents/enroll",
+            json={
+                "token": token,
+                "hostname": "test-agent.local",
+                "os_platform": "linux",
+                "os_version": "Ubuntu 24.04",
+                "os_arch": "x86_64",
+                "agent_version": "0.1.0",
+                "csr_pem": csr_pem,
+            },
+        )
         assert resp.status_code == 201
         cert = x509.load_pem_x509_certificate(resp.json()["client_cert_pem"].encode())
         eku = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
@@ -176,15 +197,18 @@ class TestCertRenewal:
     def enrolled_agent(self, http: httpx.Client):
         token = _create_enrollment_token(http)
         csr_pem, _ = _generate_csr()
-        resp = http.post("/api/v1/agents/enroll", json={
-            "token": token,
-            "hostname": "renewal-test.local",
-            "os_platform": "linux",
-            "os_version": "Ubuntu 24.04",
-            "os_arch": "x86_64",
-            "agent_version": "0.1.0",
-            "csr_pem": csr_pem,
-        })
+        resp = http.post(
+            "/api/v1/agents/enroll",
+            json={
+                "token": token,
+                "hostname": "renewal-test.local",
+                "os_platform": "linux",
+                "os_version": "Ubuntu 24.04",
+                "os_arch": "x86_64",
+                "agent_version": "0.1.0",
+                "csr_pem": csr_pem,
+            },
+        )
         assert resp.status_code == 201
         return resp.json()
 
@@ -192,7 +216,9 @@ class TestCertRenewal:
         agent_id = enrolled_agent["agent_id"]
         csr_pem, _ = _generate_csr("renewal-test.local")
 
-        resp = http.post(f"/api/v1/agents/{agent_id}/renew-cert", json={"csr_pem": csr_pem})
+        resp = http.post(
+            f"/api/v1/agents/{agent_id}/renew-cert", json={"csr_pem": csr_pem}
+        )
         assert resp.status_code == 200, resp.text
         data = resp.json()
         assert "-----BEGIN CERTIFICATE-----" in data["client_cert_pem"]
@@ -200,7 +226,9 @@ class TestCertRenewal:
 
     def test_renew_cert_invalid_agent(self, http: httpx.Client):
         csr_pem, _ = _generate_csr()
-        resp = http.post("/api/v1/agents/agt_doesnotexist/renew-cert", json={"csr_pem": csr_pem})
+        resp = http.post(
+            "/api/v1/agents/agt_doesnotexist/renew-cert", json={"csr_pem": csr_pem}
+        )
         assert resp.status_code == 404
 
 
@@ -209,19 +237,24 @@ class TestAgentPolicy:
     def enrolled_agent(self, http: httpx.Client):
         token = _create_enrollment_token(http)
         csr_pem, _ = _generate_csr()
-        resp = http.post("/api/v1/agents/enroll", json={
-            "token": token,
-            "hostname": "policy-test.local",
-            "os_platform": "linux",
-            "os_version": "Ubuntu 24.04",
-            "os_arch": "x86_64",
-            "agent_version": "0.1.0",
-            "csr_pem": csr_pem,
-        })
+        resp = http.post(
+            "/api/v1/agents/enroll",
+            json={
+                "token": token,
+                "hostname": "policy-test.local",
+                "os_platform": "linux",
+                "os_version": "Ubuntu 24.04",
+                "os_arch": "x86_64",
+                "agent_version": "0.1.0",
+                "csr_pem": csr_pem,
+            },
+        )
         assert resp.status_code == 201
         return resp.json()
 
-    def test_get_agent_policy_no_default(self, http: httpx.Client, enrolled_agent: dict):
+    def test_get_agent_policy_no_default(
+        self, http: httpx.Client, enrolled_agent: dict
+    ):
         """If no default policy exists, returns 404."""
         agent_id = enrolled_agent["agent_id"]
         resp = http.get(f"/api/v1/agents/{agent_id}/policy")
