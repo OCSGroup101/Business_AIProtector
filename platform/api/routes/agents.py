@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -101,7 +101,7 @@ async def get_agent(
 @router.post("/{agent_id}/isolate", status_code=status.HTTP_202_ACCEPTED)
 async def isolate_agent(
     agent_id: str = Path(...),
-    request: IsolateRequest,
+    request: IsolateRequest = Body(...),
     db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
 ) -> dict:
