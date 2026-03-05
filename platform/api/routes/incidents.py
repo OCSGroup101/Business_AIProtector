@@ -136,7 +136,7 @@ async def get_incident(
 @router.patch("/{incident_id}", response_model=IncidentSummary)
 async def update_incident(
     incident_id: str = Path(...),
-    request: UpdateIncidentRequest = ...,
+    request: UpdateIncidentRequest,
     db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.INCIDENTS_WRITE)),
 ) -> IncidentSummary:
