@@ -346,14 +346,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update && sudo apt-get install -y trivy
+
       - name: Trivy config scan (docker-compose)
-        uses: aquasecurity/trivy-action@0.30.0
-        with:
-          scan-type: "config"
-          scan-ref: "docker-compose.yml"
-          severity: "CRITICAL"
-          exit-code: "1"
-          trivyignores: ".trivyignore"
+        run: trivy config docker-compose.yml --severity CRITICAL --exit-code 1
 
 # ─── Stage 6: Isolation Tests ─────────────────────────────────────────────────
   isolation-tests:

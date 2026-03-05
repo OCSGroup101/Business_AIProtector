@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
 def _safe(value: object) -> str:
     """Strip newlines from a value before logging to prevent log injection."""
     return str(value).replace("\n", "\\n").replace("\r", "\\r")
