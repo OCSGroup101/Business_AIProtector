@@ -19,6 +19,8 @@ use tracing::info;
 
 use crate::collectors::Collector;
 use crate::config::AgentConfig;
+#[cfg(target_os = "linux")]
+use crate::core::event_bus::Principal;
 use crate::core::event_bus::{EventPublisher, EventType, OsInfo, TelemetryEvent};
 
 pub struct AuthCollector {
@@ -58,7 +60,7 @@ impl Collector for AuthCollector {
         "auth"
     }
 
-    async fn run(self: Box<Self>, _publisher: EventPublisher) -> Result<()> {
+    async fn run(self: Box<Self>, publisher: EventPublisher) -> Result<()> {
         info!(event_ids = ?self.event_ids, "AuthCollector starting");
 
         #[cfg(target_os = "linux")]
