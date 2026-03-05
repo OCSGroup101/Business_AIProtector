@@ -118,7 +118,8 @@ async def readiness_check() -> dict:
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("Unhandled exception for %s %s", request.method, request.url)
+    safe_url = str(request.url).replace("\n", "\\n").replace("\r", "\\r")
+    logger.exception("Unhandled exception for %s %s", request.method, safe_url)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},
