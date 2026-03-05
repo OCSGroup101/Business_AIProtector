@@ -190,6 +190,7 @@ mod tests {
                 telemetry_upload_interval_secs: 300,
                 buffer_upload_threshold_pct: 50,
                 update_signing_pubkey: None,
+                ioc_poll_interval_secs: None,
             },
             storage: crate::config::StorageConfig {
                 data_dir: dir.path().to_path_buf(),
