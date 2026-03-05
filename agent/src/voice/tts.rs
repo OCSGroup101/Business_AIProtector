@@ -9,6 +9,8 @@
 
 use anyhow::Result;
 use tracing::debug;
+#[cfg(target_os = "linux")]
+use tracing::warn;
 
 use crate::core::event_bus::Severity;
 

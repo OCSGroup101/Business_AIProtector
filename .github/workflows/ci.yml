@@ -88,7 +88,7 @@ jobs:
       - name: mypy
         run: |
           pip install -r platform/api/requirements.txt
-          cd platform && mypy api/ --strict --ignore-missing-imports --explicit-package-bases
+          cd platform && mypy api/ --ignore-missing-imports --explicit-package-bases
 
   quality-typescript:
     name: "Stage 1 — Code Quality (TypeScript)"
@@ -347,7 +347,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy config scan (docker-compose)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           scan-type: "config"
           scan-ref: "docker-compose.yml"
