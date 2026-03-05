@@ -52,7 +52,7 @@ async def fetch_otx_iocs() -> list[dict]:
 
     headers = {"X-OTX-API-KEY": api_key}
     url = f"{OTX_API_BASE}/pulses/subscribed"
-    params = {"modified_since": since, "limit": 50}
+    params: dict[str, str] = {"modified_since": since, "limit": "50"}
 
     results: list[dict] = []
     seen: set[str] = set()
