@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 @router.post("/batch", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_telemetry_batch(
     request: Request,
@@ -58,7 +63,7 @@ async def ingest_telemetry_batch(
     if parse_errors > 0:
         logger.warning(
             "Agent %s: %d malformed telemetry lines in batch of %d",
-            x_agent_id,
+            _safe(x_agent_id),
             parse_errors,
             len(lines),
         )
@@ -90,13 +95,13 @@ async def ingest_telemetry_batch(
             except Exception:
                 logger.exception(
                     "Failed to create/update incident for agent=%s rule=%s",
-                    agent_id,
-                    detection.get("rule_id"),
+                    _safe(agent_id),
+                    _safe(detection.get("rule_id")),
                 )
 
     logger.info(
         "Telemetry batch: agent=%s events=%d errors=%d incidents=%d",
-        x_agent_id,
+        _safe(x_agent_id),
         len(events),
         parse_errors,
         len(incidents_touched),

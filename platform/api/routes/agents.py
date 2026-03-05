@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 class AgentSummary(BaseModel):
     id: str
     hostname: str
@@ -110,7 +115,9 @@ async def isolate_agent(
 
     await push_command(agent_id, {"type": "isolate", "reason": request.reason})
     logger.info(
-        "Isolation command queued for agent %s (reason: %s)", agent_id, request.reason
+        "Isolation command queued for agent %s (reason: %s)",
+        _safe(agent_id),
+        _safe(request.reason),
     )
     return {"status": "queued", "agent_id": agent_id}
 
@@ -121,7 +128,19 @@ async def lift_isolation(
     db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
 ) -> dict:
-    """Queue a lift-isolation command."""
+    """Queue a lift-isolation command (DELETE semantics)."""
     await push_command(agent_id, {"type": "lift_isolation"})
     logger.info("Lift-isolation command queued for agent %s", agent_id)
+    return {"status": "queued", "agent_id": agent_id}
+
+
+@router.post("/{agent_id}/unisolate", status_code=status.HTTP_202_ACCEPTED)
+async def unisolate_agent(
+    agent_id: str = Path(...),
+    db: AsyncSession = Depends(get_tenant_session),
+    _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
+) -> dict:
+    """Queue a lift-isolation command (POST alias for console compatibility)."""
+    await push_command(agent_id, {"type": "lift_isolation"})
+    logger.info("Unisolate command queued for agent %s", agent_id)
     return {"status": "queued", "agent_id": agent_id}
