@@ -130,7 +130,7 @@ async def lift_isolation(
 ) -> dict:
     """Queue a lift-isolation command (DELETE semantics)."""
     await push_command(agent_id, {"type": "lift_isolation"})
-    logger.info("Lift-isolation command queued for agent %s", agent_id)
+    logger.info("Lift-isolation command queued for agent %s", _safe(agent_id))
     return {"status": "queued", "agent_id": agent_id}
 
 
@@ -142,5 +142,5 @@ async def unisolate_agent(
 ) -> dict:
     """Queue a lift-isolation command (POST alias for console compatibility)."""
     await push_command(agent_id, {"type": "lift_isolation"})
-    logger.info("Unisolate command queued for agent %s", agent_id)
+    logger.info("Unisolate command queued for agent %s", _safe(agent_id))
     return {"status": "queued", "agent_id": agent_id}
