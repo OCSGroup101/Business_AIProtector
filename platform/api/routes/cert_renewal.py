@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 # ─── Cert renewal ─────────────────────────────────────────────────────────────
 
 
@@ -78,8 +83,8 @@ async def renew_agent_cert(
     cert_valid_seconds = int((cert_expires_at - now).total_seconds())
     logger.info(
         "Cert renewed for agent %s (serial %s, expires in %ds)",
-        agent_id,
-        cert_serial,
+        _safe(agent_id),
+        _safe(cert_serial),
         cert_valid_seconds,
     )
 
