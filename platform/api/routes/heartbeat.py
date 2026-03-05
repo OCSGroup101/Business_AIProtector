@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
 
 class HealthMetrics(BaseModel):
     cpu_percent: float = 0.0
@@ -85,8 +89,8 @@ async def agent_heartbeat(
 
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
-        agent_id,
-        request.state,
+        _safe(agent_id),
+        _safe(request.state),
         len(commands),
     )
 
