@@ -21,9 +21,7 @@ pub struct CorrelationTracker {
 
 impl CorrelationTracker {
     pub fn new() -> Self {
-        Self {
-            _placeholder: (),
-        }
+        Self { _placeholder: () }
     }
 
     /// Evaluate multi-event rules against `event`.
