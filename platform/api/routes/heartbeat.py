@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 class HealthMetrics(BaseModel):
     cpu_percent: float = 0.0
     ram_mb: int = 0
@@ -94,7 +99,7 @@ async def agent_heartbeat(
             commands.append(PlatformCommand(type="renew_cert", payload=None))
             logger.info(
                 "Agent %s cert expires in %.0fs — queuing renew_cert",
-                agent_id,
+                _safe(agent_id),
                 secs_remaining,
             )
 
@@ -112,8 +117,8 @@ async def agent_heartbeat(
 
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
-        agent_id,
-        request.state,
+        _safe(agent_id),
+        _safe(request.state),
         len(commands),
     )
 

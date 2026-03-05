@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 class IocSummary(BaseModel):
     id: str
     ioc_type: str
@@ -121,7 +126,10 @@ async def get_ioc_bundle(
         lines.append(json.dumps(record, separators=(",", ":")))
 
     logger.debug(
-        "IOC bundle: %d records for agent %s (since=%s)", len(lines), x_agent_id, since
+        "IOC bundle: %d records for agent %s (since=%s)",
+        len(lines),
+        _safe(x_agent_id),
+        since,
     )
     return Response(
         content="\n".join(lines),
