@@ -84,6 +84,12 @@ pub struct CorrelationTracker {
     event_count: u64,
 }
 
+impl Default for CorrelationTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CorrelationTracker {
     pub fn new() -> Self {
         Self {
