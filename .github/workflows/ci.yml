@@ -276,10 +276,18 @@ jobs:
         run: cargo build --manifest-path agent/Cargo.toml --release --target x86_64-unknown-linux-gnu
 
       - name: Build agent (Linux aarch64)
-        run: cargo build --manifest-path agent/Cargo.toml --release --target aarch64-unknown-linux-gnu
+        run: |
+          # Purge any stale cross-compile artifacts before linking.
+          # The [lib]+[[bin]] combination can cause x86_64 CGU objects to be
+          # stored in the aarch64 target dir via the Rust cache; cleaning the
+          # cross-target before each build prevents the linker elf64 mismatch.
+          cargo clean --manifest-path agent/Cargo.toml --target aarch64-unknown-linux-gnu
+          cargo build --manifest-path agent/Cargo.toml --release --target aarch64-unknown-linux-gnu
 
       - name: Build agent (Windows x86_64)
-        run: cargo build --manifest-path agent/Cargo.toml --release --target x86_64-pc-windows-gnu
+        run: |
+          cargo clean --manifest-path agent/Cargo.toml --target x86_64-pc-windows-gnu
+          cargo build --manifest-path agent/Cargo.toml --release --target x86_64-pc-windows-gnu
 
       # ─── Generate SBOMs ──────────────────────────────────────────────────
       - name: Install syft
