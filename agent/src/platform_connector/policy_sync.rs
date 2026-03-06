@@ -31,6 +31,12 @@ pub struct PolicyHandle {
     inner: Arc<RwLock<LivePolicy>>,
 }
 
+impl Default for PolicyHandle {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PolicyHandle {
     pub fn new() -> Self {
         Self {
