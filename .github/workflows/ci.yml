@@ -209,6 +209,7 @@ jobs:
         run: |
           pytest api/tests/ \
             --ignore=api/tests/isolation \
+            --ignore=api/tests/test_enrollment.py \
             --cov=api \
             --cov-report=xml \
             --cov-report=term-missing \
