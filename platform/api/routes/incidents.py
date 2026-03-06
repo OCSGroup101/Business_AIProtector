@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -136,7 +136,7 @@ async def get_incident(
 @router.patch("/{incident_id}", response_model=IncidentSummary)
 async def update_incident(
     incident_id: str = Path(...),
-    request: UpdateIncidentRequest = ...,
+    request: UpdateIncidentRequest = Body(...),
     db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.INCIDENTS_WRITE)),
 ) -> IncidentSummary:

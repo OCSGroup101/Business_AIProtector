@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -51,7 +51,7 @@ class HeartbeatResponse(BaseModel):
 @router.post("/{agent_id}/heartbeat", response_model=HeartbeatResponse)
 async def agent_heartbeat(
     agent_id: str = Path(...),
-    request: HeartbeatRequest = ...,
+    request: HeartbeatRequest = Body(...),
     db: AsyncSession = Depends(get_tenant_session),
 ) -> HeartbeatResponse:
     """

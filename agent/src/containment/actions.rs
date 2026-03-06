@@ -34,7 +34,7 @@ impl std::fmt::Display for ContainmentAction {
 }
 
 impl ContainmentAction {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse_action(s: &str) -> Option<Self> {
         match s {
             "terminate_process" => Some(Self::TerminateProcess),
             "quarantine_file" => Some(Self::QuarantineFile),
@@ -74,7 +74,7 @@ impl ContainmentDispatcher {
         action_name: &str,
         event: &TelemetryEvent,
     ) -> Result<ContainmentResult> {
-        let action = match ContainmentAction::from_str(action_name) {
+        let action = match ContainmentAction::parse_action(action_name) {
             Some(a) => a,
             None => {
                 warn!(action = %action_name, "Unknown containment action — skipping");
