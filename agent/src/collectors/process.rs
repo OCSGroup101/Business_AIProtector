@@ -123,9 +123,8 @@ mod etw {
     use windows::core::{GUID, PCWSTR, PWSTR};
     use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, ERROR_SUCCESS};
     use windows::Win32::System::Diagnostics::Etw::{
-        EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW,
-        CONTROLTRACE_HANDLE, EVENT_RECORD, EVENT_TRACE_LOGFILEW, EVENT_TRACE_PROPERTIES,
-        PROCESSTRACE_HANDLE,
+        EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW, CONTROLTRACE_HANDLE,
+        EVENT_RECORD, EVENT_TRACE_LOGFILEW, EVENT_TRACE_PROPERTIES, PROCESSTRACE_HANDLE,
     };
     use windows::Win32::System::Threading::{
         OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
