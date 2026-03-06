@@ -349,7 +349,8 @@ mod etw {
             // A previous (possibly crashed) agent instance left an ETW session open.
             // Stop it cleanly, then start fresh.
             tracing::debug!("ETW session already exists — stopping and restarting");
-            let _ = unsafe { StopTraceW(CONTROLTRACE_HANDLE { Value: 0 }, session_name, props_ptr) };
+            let _ =
+                unsafe { StopTraceW(CONTROLTRACE_HANDLE { Value: 0 }, session_name, props_ptr) };
 
             // Re-zero the buffer after StopTraceW may have modified it
             buf = alloc_trace_properties();
