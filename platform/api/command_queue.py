@@ -17,6 +17,7 @@ best-effort delivery of operational commands.
 import json
 import logging
 import os
+from typing import Optional, cast
 
 import redis.asyncio as aioredis
 
@@ -67,7 +68,7 @@ async def pop_commands(agent_id: str, max_commands: int = 5) -> list[dict]:
     try:
         commands: list[dict] = []
         for _ in range(max_commands):
-            raw = await r.rpop(_key(agent_id))
+            raw = cast(Optional[str], await r.rpop(_key(agent_id)))
             if raw is None:
                 break
             try:
