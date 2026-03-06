@@ -338,7 +338,7 @@ mod etw {
     pub fn start_session() -> Result<(CONTROLTRACE_HANDLE, Vec<u8>)> {
         let session_name = PCWSTR::from_raw(SESSION_NAME_W.as_ptr());
         let mut buf = alloc_trace_properties();
-        let mut session_handle = CONTROLTRACE_HANDLE(0);
+        let mut session_handle = CONTROLTRACE_HANDLE { Value: 0 };
 
         let props_ptr = buf.as_mut_ptr() as *mut EVENT_TRACE_PROPERTIES;
 
@@ -349,7 +349,7 @@ mod etw {
             // A previous (possibly crashed) agent instance left an ETW session open.
             // Stop it cleanly, then start fresh.
             tracing::debug!("ETW session already exists — stopping and restarting");
-            let _ = unsafe { StopTraceW(CONTROLTRACE_HANDLE(0), session_name, props_ptr) };
+            let _ = unsafe { StopTraceW(CONTROLTRACE_HANDLE { Value: 0 }, session_name, props_ptr) };
 
             // Re-zero the buffer after StopTraceW may have modified it
             buf = alloc_trace_properties();
@@ -374,7 +374,7 @@ mod etw {
                 PROCESS_KEYWORD,
                 0,
                 0,
-                std::ptr::null(),
+                None,
             )
         };
 
@@ -406,9 +406,8 @@ mod etw {
 
         let handle = unsafe { OpenTraceW(&mut logfile) };
 
-        // INVALID_PROCESSTRACE_HANDLE is represented as isize::MAX (0x7FFFFFFF...FF)
-        // on x64, which equals u64::MAX when reinterpreted. Check for the sentinel.
-        if handle.0 == isize::MAX {
+        // INVALID_PROCESSTRACE_HANDLE = (TRACEHANDLE)(ULONG_PTR)(-1) = all bits set = u64::MAX.
+        if handle.Value == u64::MAX {
             anyhow::bail!(
                 "OpenTraceW failed — is the ETW session running? ({})",
                 unsafe { windows::Win32::Foundation::GetLastError().0 }
@@ -452,7 +451,7 @@ mod etw {
                 // blocks here and invokes on_event_record for each event.
                 unsafe {
                     let handles = [trace_handle];
-                    ProcessTrace(handles.as_ptr(), 1, std::ptr::null(), std::ptr::null());
+                    ProcessTrace(&handles, None, None);
                 }
 
                 tracing::debug!("ETW ProcessTrace thread exiting");
