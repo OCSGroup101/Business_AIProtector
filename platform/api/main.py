@@ -101,7 +101,7 @@ async def health_check() -> dict:
 
 
 @app.get("/health/ready", tags=["health"])
-async def readiness_check() -> dict:
+async def readiness_check() -> dict | JSONResponse:
     """Readiness check — verifies database connectivity."""
     from .database import check_db_connection
 
@@ -118,7 +118,8 @@ async def readiness_check() -> dict:
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("Unhandled exception for %s %s", request.method, request.url)
+    safe_url = str(request.url).replace("\n", "\\n").replace("\r", "\\r")
+    logger.exception("Unhandled exception for %s %s", request.method, safe_url)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},

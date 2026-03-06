@@ -30,7 +30,7 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -59,7 +59,10 @@ def initialize_ca() -> None:
     ca_key_pem = os.environ.get("OPENCLAW_CA_KEY")
     ca_cert_pem = os.environ.get("OPENCLAW_CA_CERT")
     if ca_key_pem and ca_cert_pem:
-        _ca_key = serialization.load_pem_private_key(ca_key_pem.encode(), password=None)
+        _ca_key = cast(
+            rsa.RSAPrivateKey,
+            serialization.load_pem_private_key(ca_key_pem.encode(), password=None),
+        )
         _ca_cert = x509.load_pem_x509_certificate(ca_cert_pem.encode())
         logger.info("Platform CA loaded from environment variables")
         return
@@ -70,8 +73,9 @@ def initialize_ca() -> None:
     cert_path = pki_dir / "ca.crt"
 
     if key_path.exists() and cert_path.exists():
-        _ca_key = serialization.load_pem_private_key(
-            key_path.read_bytes(), password=None
+        _ca_key = cast(
+            rsa.RSAPrivateKey,
+            serialization.load_pem_private_key(key_path.read_bytes(), password=None),
         )
         _ca_cert = x509.load_pem_x509_certificate(cert_path.read_bytes())
         logger.info("Platform CA loaded from %s", pki_dir)
@@ -216,7 +220,9 @@ def sign_agent_csr(csr_pem: str, agent_id: str) -> tuple[str, str, str, datetime
             critical=False,
         )
         .add_extension(
-            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_cert.public_key()),
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(
+                cast(rsa.RSAPublicKey, ca_cert.public_key())
+            ),
             critical=False,
         )
         .sign(ca_key, hashes.SHA256())
