@@ -165,11 +165,13 @@ services:
       - openclaw-internal
       - openclaw-external
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health/ready || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
+      # Keycloak 26 moved the health endpoint to the management interface
+      # (port 9000) in start-dev mode; port 8080 returns 404 for /health/*.
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1"]
+      interval: 20s
+      timeout: 15s
+      retries: 15
+      start_period: 90s
     logging: *default-logging
 
   # ─── MinIO ────────────────────────────────────────────────────────────────
@@ -304,7 +306,9 @@ services:
       kafka:
         condition: service_healthy
       keycloak:
-        condition: service_healthy
+        # Dev mode (OPENCLAW_DEV_MODE=true) bypasses Keycloak JWT validation;
+        # use service_started so CI doesn't block waiting for KC to be healthy.
+        condition: service_started
     networks:
       - openclaw-internal
     logging: *default-logging
