@@ -19,6 +19,12 @@ pub struct CorrelationTracker {
     _placeholder: (),
 }
 
+impl Default for CorrelationTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CorrelationTracker {
     pub fn new() -> Self {
         Self { _placeholder: () }
