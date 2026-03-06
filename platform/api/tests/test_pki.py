@@ -85,15 +85,24 @@ class TestSignAgentCsr:
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         csr = (
             x509.CertificateSigningRequestBuilder()
-            .subject_name(x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, cn)]))
-            .sign(key, __import__("cryptography.hazmat.primitives.hashes", fromlist=["SHA256"]).SHA256())
+            .subject_name(
+                x509.Name([x509.NameAttribute(x509.oid.NameOID.COMMON_NAME, cn)])
+            )
+            .sign(
+                key,
+                __import__(
+                    "cryptography.hazmat.primitives.hashes", fromlist=["SHA256"]
+                ).SHA256(),
+            )
         )
         return csr.public_bytes(serialization.Encoding.PEM).decode()
 
     def test_sign_csr_returns_four_values(self):
         pki.initialize_ca()
         csr_pem = self._make_csr("agent-001")
-        cert_pem, ca_pem, serial_hex, expires_at = pki.sign_agent_csr(csr_pem, "agent-001")
+        cert_pem, ca_pem, serial_hex, expires_at = pki.sign_agent_csr(
+            csr_pem, "agent-001"
+        )
         assert cert_pem.startswith("-----BEGIN CERTIFICATE-----")
         assert ca_pem.startswith("-----BEGIN CERTIFICATE-----")
         assert len(serial_hex) > 0
