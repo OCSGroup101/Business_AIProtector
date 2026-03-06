@@ -22,7 +22,7 @@ pub async fn terminate_process(pid: u32) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 fn terminate_windows(pid: u32) -> Result<()> {
-    use windows::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
 
     unsafe {
