@@ -27,7 +27,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::json;
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::collectors::Collector;
 use crate::config::AgentConfig;
@@ -123,7 +123,7 @@ mod etw {
     use windows::core::{GUID, PCWSTR, PWSTR};
     use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, ERROR_SUCCESS};
     use windows::Win32::System::Diagnostics::Etw::{
-        CloseTrace, EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW,
+        EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW,
         CONTROLTRACE_HANDLE, EVENT_RECORD, EVENT_TRACE_LOGFILEW, EVENT_TRACE_PROPERTIES,
         PROCESSTRACE_HANDLE,
     };
@@ -397,13 +397,9 @@ mod etw {
         // LoggerName: non-const PWSTR — ETW won't modify it
         logfile.LoggerName = PWSTR(SESSION_NAME_W.as_ptr() as *mut u16);
 
-        // SAFETY: union field write — ProcessTraceMode and EventRecordCallback are
-        // the only fields we set; the rest remain zero from zeroed().
-        unsafe {
-            logfile.Anonymous1.ProcessTraceMode =
-                PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
-            logfile.Anonymous2.EventRecordCallback = Some(on_event_record);
-        }
+        logfile.Anonymous1.ProcessTraceMode =
+            PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
+        logfile.Anonymous2.EventRecordCallback = Some(on_event_record);
 
         let handle = unsafe { OpenTraceW(&mut logfile) };
 
