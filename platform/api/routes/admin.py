@@ -38,6 +38,7 @@ def _safe(value: object) -> str:
     """Strip newlines from a value before logging to prevent log injection."""
     return str(value).replace("\n", "\\n").replace("\r", "\\r")
 
+
 _ADMIN_TOKEN_ENV = "OPENCLAW_ADMIN_TOKEN"
 _DEV_FALLBACK_TOKEN = "dev-admin-token"  # only used when OPENCLAW_DEV_MODE=true
 
@@ -135,7 +136,9 @@ async def create_tenant(
     await db.execute(text("SELECT create_tenant_schema(:tid)"), {"tid": body.id})
     await db.commit()
 
-    logger.info("Tenant provisioned: id=%s schema=%s", _safe(body.id), _safe(schema_name))
+    logger.info(
+        "Tenant provisioned: id=%s schema=%s", _safe(body.id), _safe(schema_name)
+    )
 
     return TenantResponse(
         id=tenant.id,
