@@ -267,6 +267,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "agent -> target"
+          # Separate cache key from Stage 3 (test) to prevent x86_64 artifacts
+          # cached by Stage 3 from contaminating aarch64 cross-compile objects.
+          prefix-key: "v1-cross"
 
       - name: Build agent (Linux x86_64)
         run: cargo build --manifest-path agent/Cargo.toml --release --target x86_64-unknown-linux-gnu
