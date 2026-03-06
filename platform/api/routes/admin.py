@@ -136,7 +136,9 @@ async def create_tenant(
     await db.execute(text("SELECT create_tenant_schema(:tid)"), {"tid": body.id})
     await db.commit()
 
-    logger.info("Tenant provisioned: id=%s schema=%s", _safe(body.id), _safe(schema_name))
+    logger.info(
+        "Tenant provisioned: id=%s schema=%s", _safe(body.id), _safe(schema_name)
+    )
 
     return TenantResponse(
         id=tenant.id,
