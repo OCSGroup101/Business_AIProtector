@@ -12,6 +12,10 @@ description = "OpenClaw endpoint security agent"
 repository = "https://github.com/omni-cyber-solutions/openclaw"
 rust-version = "1.77"
 
+[lib]
+name = "openclaw_agent"
+path = "src/lib.rs"
+
 [[bin]]
 name = "openclaw-agent"
 path = "src/main.rs"
