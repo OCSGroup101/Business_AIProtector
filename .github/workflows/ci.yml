@@ -205,10 +205,11 @@ jobs:
       - name: Run pytest with coverage
         env:
           DATABASE_URL: postgresql+asyncpg://openclaw:openclaw_test@localhost:5432/openclaw_test
+        working-directory: platform
         run: |
-          pytest platform/api/tests/ \
-            --ignore=platform/api/tests/isolation \
-            --cov=platform/api \
+          pytest api/tests/ \
+            --ignore=api/tests/isolation \
+            --cov=api \
             --cov-report=xml \
             --cov-report=term-missing \
             --cov-fail-under=10 \
@@ -218,7 +219,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          file: coverage.xml
+          file: platform/coverage.xml
           flags: platform
 
   test-console:
