@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import ExtendedKeyUsageOID
 
-from platform.api import pki
+from api import pki
 
 
 @pytest.fixture(autouse=True)
