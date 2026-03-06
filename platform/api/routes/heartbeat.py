@@ -51,7 +51,7 @@ class HeartbeatResponse(BaseModel):
 @router.post("/{agent_id}/heartbeat", response_model=HeartbeatResponse)
 async def agent_heartbeat(
     agent_id: str = Path(...),
-    request: HeartbeatRequest = ...,
+    request: HeartbeatRequest = Body(...),
     db: AsyncSession = Depends(get_tenant_session),
 ) -> HeartbeatResponse:
     """
