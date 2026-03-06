@@ -27,7 +27,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::json;
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::collectors::Collector;
 use crate::config::AgentConfig;
@@ -98,7 +98,7 @@ impl Collector for ProcessCollector {
 async fn run_windows(collector: ProcessCollector, publisher: EventPublisher) -> Result<()> {
     match etw::start_session() {
         Ok((session, trace)) => {
-            info!("ETW ProcessCollector started (provider: 22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716)");
+            tracing::info!("ETW ProcessCollector started (provider: 22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716)");
             etw::run_relay(collector, publisher, session, trace).await
         }
         Err(e) => {
