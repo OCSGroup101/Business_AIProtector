@@ -1,0 +1,68 @@
+## OC-SEQ-0002 — Ransomware Sequence: Shadow Delete → File Encryption
+##
+## Fires when backup destruction (shadow copy or catalog deletion) is followed
+## within 2 minutes by at least 10 file modifications with ransomware-typical
+## extensions on the same host.  This two-step sequence is a near-universal
+## indicator of ransomware execution rather than legitimate backup activity.
+##
+## MITRE: T1490 (Inhibit System Recovery), T1486 (Data Encrypted for Impact)
+## Phase: 2 (sequence rule)
+
+[[rules]]
+id       = "OC-SEQ-0002"
+name     = "Ransomware: backup destruction followed by mass file encryption"
+enabled  = true
+
+[rules.mitre]
+tactics    = ["TA0040"]
+techniques = ["T1490", "T1486"]
+
+[rules.match]
+type            = "sequence"
+window_seconds  = 120
+correlation_key = "hostname"
+
+# Step 1: backup or shadow copy destruction command runs
+[[rules.match.sequence]]
+event_type = "process.create"
+
+[[rules.match.sequence.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "vssadmin.exe",
+  "wbadmin.exe",
+  "bcdedit.exe",
+  "wmic.exe",
+]
+
+# Step 2: 10 or more file modifications with ransomware extensions within the window
+[[rules.match.sequence]]
+event_type      = "file.modify"
+count_threshold = 10
+
+[[rules.match.sequence.conditions]]
+field    = "payload.path"
+operator = "ends_with"
+values   = [
+  ".encrypted",
+  ".locked",
+  ".enc",
+  ".crypt",
+  ".crypted",
+  ".crypz",
+  ".locky",
+  ".cerber",
+  ".zepto",
+  ".wnry",
+  ".wncry",
+  ".wcry",
+  ".zzzzz",
+  ".fun",
+  ".pays",
+]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["isolate_network", "kill_process"]
+notify       = true

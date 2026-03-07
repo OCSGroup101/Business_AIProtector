@@ -1,0 +1,39 @@
+## OC-THR-0002 — Data Exfiltration: High-Volume Outbound Connections
+##
+## Fires when a single user account makes 30 or more outbound network connections
+## within 2 minutes.  High-frequency outbound bursts are a common indicator of
+## automated exfiltration (HTTPS/DNS bulk upload, FTP, custom C2 beaconing) and
+## are anomalous for interactive user sessions.
+##
+## Tuning: adjust threshold and window_seconds based on environment baseline.
+## Lower threshold (e.g. 15) for high-security environments; raise for bulk-
+## data workloads (file servers, backup agents) by scoping via exclusion tags.
+##
+## MITRE: T1048 (Exfiltration Over Alternative Protocol), T1071.001 (Web Protocols)
+## Phase: 2 (threshold rule)
+
+[[rules]]
+id       = "OC-THR-0002"
+name     = "High-volume outbound connections — potential data exfiltration"
+enabled  = true
+
+[rules.mitre]
+tactics    = ["TA0010"]
+techniques = ["T1048", "T1071.001"]
+
+[rules.match]
+type            = "threshold"
+event_types     = ["network.connect"]
+threshold       = 30
+window_seconds  = 120
+correlation_key = "principal.user"
+
+# Only count outbound connections
+[[rules.match.conditions]]
+field    = "payload.direction"
+operator = "eq"
+values   = ["outbound"]
+
+[rules.response]
+severity = "MEDIUM"
+notify   = true
