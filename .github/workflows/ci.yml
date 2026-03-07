@@ -392,6 +392,8 @@ jobs:
             curl -sf http://localhost:8888/health/ready && break
             sleep 5
           done
+          # Capture platform-api logs to diagnose startup failures
+          docker compose logs platform-api || true
 
       - name: Install test dependencies
         run: pip install -r platform/api/requirements-dev.txt
