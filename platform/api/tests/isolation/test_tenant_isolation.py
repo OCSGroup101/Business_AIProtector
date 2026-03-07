@@ -17,10 +17,10 @@ PLATFORM_URL = os.environ.get("PLATFORM_URL", "http://localhost:8888")
 
 # Fixture tokens — in CI, these are real Keycloak JWTs for test tenants
 # For Phase 0: placeholder JWTs; isolation test logic is complete
-TENANT_A_ADMIN_TOKEN = os.environ.get("TEST_TENANT_A_TOKEN", "tenant_a_placeholder")
-TENANT_B_ADMIN_TOKEN = os.environ.get("TEST_TENANT_B_TOKEN", "tenant_b_placeholder")
+TENANT_A_ADMIN_TOKEN = os.environ.get("TEST_TENANT_A_TOKEN", "dev-admin-token")
+TENANT_B_ADMIN_TOKEN = os.environ.get("TEST_TENANT_B_TOKEN", "dev-admin-token")
 TENANT_A_AUDITOR_TOKEN = os.environ.get(
-    "TEST_TENANT_A_AUDITOR_TOKEN", "auditor_placeholder"
+    "TEST_TENANT_A_AUDITOR_TOKEN", "dev-auditor-token"
 )
 
 TENANT_A_INCIDENT_ID = os.environ.get("TEST_TENANT_A_INCIDENT_ID", "inc_test_tenant_a")
