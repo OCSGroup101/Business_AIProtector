@@ -89,6 +89,32 @@ async def agent_heartbeat(
         for c in raw_commands
     ]
 
+    now = datetime.now(timezone.utc)
+    if agent.cert_expires_at:
+        expires_at = agent.cert_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        secs_remaining = (expires_at - now).total_seconds()
+        if secs_remaining < CERT_RENEW_THRESHOLD_SECS:
+            commands.append(PlatformCommand(type="renew_cert", payload=None))
+            logger.info(
+                "Agent %s cert expires in %.0fs — queuing renew_cert",
+                _safe(agent_id),
+                secs_remaining,
+            )
+
+    # Check for policy updates — compare agent's policy_version vs current default
+    policy_update_version: Optional[int] = None
+    pol_result = await db.execute(
+        select(Policy)
+        .where(Policy.is_default.is_(True), Policy.is_active.is_(True))
+        .order_by(Policy.version.desc())
+        .limit(1)
+    )
+    current_policy = pol_result.scalar_one_or_none()
+    if current_policy and current_policy.version > request.policy_version:
+        policy_update_version = current_policy.version
+
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
         _safe(agent_id),

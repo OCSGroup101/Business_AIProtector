@@ -59,6 +59,7 @@ jobs:
           # and will block merges if branch protection requires code scanning
           upload: true
 
+
   # Summary gate — satisfies branch protection's "CodeQL" required status check.
   # Branch protection requires a check named exactly "CodeQL"; the matrix jobs
   # produce "CodeQL — python" and "CodeQL — javascript-typescript". This job
