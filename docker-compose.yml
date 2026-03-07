@@ -294,6 +294,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-openclaw_minio_dev}
       LOG_LEVEL: DEBUG
       ENVIRONMENT: development
+      OPENCLAW_DEV_MODE: "true"
     volumes:
       - ./platform/api:/app:cached
     ports:
