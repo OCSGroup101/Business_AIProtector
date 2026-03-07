@@ -1,7 +1,7 @@
 """Agent heartbeat endpoint."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
@@ -12,6 +12,10 @@ from sqlalchemy import select
 from ..command_queue import pop_commands
 from ..database import get_tenant_session
 from ..models.agent import Agent
+from ..models.policy import Policy
+
+# Trigger cert renewal when less than this many seconds remain
+CERT_RENEW_THRESHOLD_SECS = 86_400  # 24 hours
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +80,7 @@ async def agent_heartbeat(
 
     await db.flush()
 
-    # Check for policy updates (Phase 2: compare versions)
-    policy_update_version: Optional[int] = None
-
-    # Drain pending commands from Redis for this agent
+    # Check if cert needs renewal (< 24 h remaining)
     raw_commands = await pop_commands(agent_id)
     commands = [
         PlatformCommand(

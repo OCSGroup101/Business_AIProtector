@@ -24,6 +24,10 @@ class Policy(Base):
     # Ed25519 minisign signature of the TOML content
     signature: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Per-rule enabled/disabled overrides: { "<rule_id>": { "enabled": bool } }
+    # Rules absent from this map inherit the enabled flag from content_toml.
+    rule_overrides: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

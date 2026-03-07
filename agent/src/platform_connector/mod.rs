@@ -1,4 +1,5 @@
 pub mod alert_uploader;
+pub mod cert_renewal;
 pub mod client;
 pub mod enrollment;
 pub mod heartbeat;

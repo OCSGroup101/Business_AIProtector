@@ -60,7 +60,7 @@ export default function IncidentsPage() {
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: IncidentStatus }) =>
-      apiClient.patch(`/api/v1/incidents/${id}/status`, { status }),
+      apiClient.patch(`/api/v1/incidents/${id}`, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["incidents"] }),
   });
 
