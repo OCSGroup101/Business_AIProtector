@@ -16,5 +16,9 @@ COPY . .
 
 EXPOSE 8888
 
-# Uvicorn with hot reload
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8888", "--reload", "--log-level", "debug"]
+# Uvicorn with hot reload.
+# --app-dir / adds / to sys.path so that /app is importable as the "app"
+# package, enabling relative imports (from . import pki) in app/main.py.
+# Without this, uvicorn imports "main" as a top-level module (__package__=""),
+# causing ImportError: attempted relative import with no known parent package.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888", "--reload", "--reload-dir", "/app", "--log-level", "debug", "--app-dir", "/"]
