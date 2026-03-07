@@ -45,3 +45,24 @@ export interface AuditEntry {
   outcome: string;
   occurred_at: string;
 }
+
+export interface DetectionRule {
+  id: string;
+  rule_id: string;
+  name: string;
+  enabled: boolean;
+  severity: Severity;
+  mitre_techniques: string[] | null;
+  match_type: "ioc" | "behavioral" | "heuristic" | "sequence" | "threshold";
+}
+
+export interface ThreatFeed {
+  id: string;
+  name: string;
+  source: string;
+  ioc_count: number;
+  last_ingested_at: string | null;
+  next_scheduled_at: string | null;
+  status: "healthy" | "degraded" | "error" | "pending";
+  error_message: string | null;
+}

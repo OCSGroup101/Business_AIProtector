@@ -6,12 +6,14 @@
 use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
 use crate::config::AgentConfig;
 use crate::core::metrics;
 use crate::core::state::AgentStateManager;
+use crate::platform_connector::cert_renewal::CertRenewalClient;
 use crate::platform_connector::client::build_platform_client;
 use crate::platform_connector::policy_sync::PolicyTrigger;
 
