@@ -10,6 +10,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import os
+
 from . import pki
 from .middleware.tenant import TenantMiddleware
 from .routes import (
@@ -24,7 +26,7 @@ from .routes import (
     policies,
     telemetry,
 )
-from .database import engine
+from .database import engine, Base
 from .intel.feed_runner import start_feed_tasks
 import logging
 
@@ -42,9 +44,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Start background threat intelligence feed tasks
     feed_tasks = start_feed_tasks()
 
-    # Run Alembic migrations on startup in dev; use explicit migration in prod
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+    # In dev mode, create all tables directly (no Alembic migration needed).
+    # In production, migrations are applied explicitly before startup.
+    if os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     yield
 

@@ -85,15 +85,31 @@ _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
 }
 
 
+# Well-known dev tokens → role mapping (dev mode only, never in production).
+# Tests use these tokens to exercise RBAC without a live Keycloak instance.
+_DEV_TOKEN_ROLES: dict[str, Role] = {
+    "dev-admin-token": Role.TENANT_ADMIN,
+    "dev-security-token": Role.SECURITY_ADMIN,
+    "dev-helpdesk-token": Role.HELPDESK,
+    "dev-auditor-token": Role.AUDITOR,
+}
+
+
 def get_current_user_role(request: Request) -> Role:
     """
     Extract the user's role from the JWT claim.
     In production this is validated by Kong; here we decode from request state.
 
     Dev bypass: set OPENCLAW_DEV_MODE=true to skip auth and grant tenant_admin.
+    Named dev tokens (dev-auditor-token, etc.) map to specific roles for RBAC tests.
     Never enable this in production.
     """
     if os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+            if token in _DEV_TOKEN_ROLES:
+                return _DEV_TOKEN_ROLES[token]
         return Role.TENANT_ADMIN
 
     role_str = getattr(request.state, "user_role", None)
