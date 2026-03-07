@@ -1,7 +1,6 @@
 // Risk behavior explanation and coaching for end users.
 // Uses Claude API with fallback to static templates.
 
-use anyhow::Result;
 use tracing::warn;
 
 use crate::assistant::claude_client::ClaudeClient;
@@ -22,7 +21,12 @@ impl CoachingEngine {
         Self { claude }
     }
 
-    pub async fn explain(&self, event: &TelemetryEvent, rule_name: &str, severity: &Severity) -> String {
+    pub async fn explain(
+        &self,
+        event: &TelemetryEvent,
+        rule_name: &str,
+        severity: &Severity,
+    ) -> String {
         if let Some(client) = &self.claude {
             let summary = format!(
                 "Process: {:?}, Type: {}, Host: {}",
@@ -30,7 +34,10 @@ impl CoachingEngine {
                 event.event_type,
                 event.hostname
             );
-            match client.explain_detection(rule_name, &summary, &format!("{:?}", severity)).await {
+            match client
+                .explain_detection(rule_name, &summary, &format!("{:?}", severity))
+                .await
+            {
                 Ok(text) => return text,
                 Err(e) => warn!(error = %e, "Claude API call failed — using fallback"),
             }

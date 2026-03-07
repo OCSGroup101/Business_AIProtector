@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import and_, or_, select, text
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models.incident import Incident, IncidentEvent
@@ -19,6 +19,13 @@ from .models.incident import Incident, IncidentEvent
 logger = logging.getLogger(__name__)
 
 _DEDUP_WINDOW = timedelta(hours=24)
+
+
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 _OPEN_STATUSES = ("OPEN", "INVESTIGATING")
 
 
@@ -70,14 +77,16 @@ async def create_or_update_incident(
 
     # Look for an existing open incident within the dedup window
     existing = await db.execute(
-        select(Incident).where(
+        select(Incident)
+        .where(
             and_(
                 Incident.agent_id == agent_id,
                 Incident.rule_id == rule_id,
                 Incident.status.in_(_OPEN_STATUSES),
                 Incident.first_seen_at >= dedup_cutoff,
             )
-        ).limit(1)
+        )
+        .limit(1)
     )
     incident = existing.scalar_one_or_none()
 
@@ -100,7 +109,10 @@ async def create_or_update_incident(
         db.add(incident)
         logger.info(
             "New incident created: id=%s agent=%s rule=%s severity=%s",
-            incident_id, agent_id, rule_id, severity,
+            _safe(incident_id),
+            _safe(agent_id),
+            _safe(rule_id),
+            _safe(severity),
         )
     else:
         # Update existing — bump last_seen and escalate severity if higher

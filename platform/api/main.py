@@ -10,9 +10,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import os
+
 from . import pki
 from .middleware.tenant import TenantMiddleware
-from .middleware.rbac import RBACMiddleware
 from .routes import (
     admin,
     agents,
@@ -42,9 +43,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Start background threat intelligence feed tasks
     feed_tasks = start_feed_tasks()
 
-    # Run Alembic migrations on startup in dev; use explicit migration in prod
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+    # In dev mode, create all tables directly (no Alembic migration needed).
+    # In production, migrations are applied explicitly before startup.
+    if os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
     yield
 
@@ -94,27 +97,33 @@ app.include_router(audit.router, prefix="/api/v1/audit", tags=["audit"])
 
 # ─── Health check ─────────────────────────────────────────────────────────────
 
+
 @app.get("/health", tags=["health"])
 async def health_check() -> dict:
     """Platform health endpoint — used by load balancers and Docker healthchecks."""
     return {"status": "healthy", "version": "0.1.0"}
 
 
-@app.get("/health/ready", tags=["health"])
-async def readiness_check() -> dict:
+@app.get("/health/ready", tags=["health"], response_model=None)
+async def readiness_check() -> dict | JSONResponse:
     """Readiness check — verifies database connectivity."""
     from .database import check_db_connection
+
     db_ok = await check_db_connection()
     if not db_ok:
-        return JSONResponse(status_code=503, content={"status": "not_ready", "db": "unreachable"})
+        return JSONResponse(
+            status_code=503, content={"status": "not_ready", "db": "unreachable"}
+        )
     return {"status": "ready"}
 
 
 # ─── Global exception handler ─────────────────────────────────────────────────
 
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("Unhandled exception for %s %s", request.method, request.url)
+    safe_url = str(request.url).replace("\n", "\\n").replace("\r", "\\r")
+    logger.exception("Unhandled exception for %s %s", request.method, safe_url)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},

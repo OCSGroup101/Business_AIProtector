@@ -12,7 +12,7 @@
 
 use anyhow::Result;
 use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tracing::{info, warn};
 
 pub struct Updater {
@@ -22,7 +22,11 @@ pub struct Updater {
 }
 
 impl Updater {
-    pub fn new(platform_url: impl Into<String>, agent_id: impl Into<String>, signing_pubkey: Option<String>) -> Self {
+    pub fn new(
+        platform_url: impl Into<String>,
+        agent_id: impl Into<String>,
+        signing_pubkey: Option<String>,
+    ) -> Self {
         Self {
             platform_url: platform_url.into(),
             agent_id: agent_id.into(),

@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 class IocSummary(BaseModel):
     id: str
     ioc_type: str
@@ -40,7 +45,7 @@ async def list_iocs(
     db: AsyncSession = Depends(get_db),
     _role=Depends(require_permission(Permission.INTEL_READ)),
 ) -> list[IocSummary]:
-    query = select(IocEntry).where(IocEntry.is_active == True).limit(limit)
+    query = select(IocEntry).where(IocEntry.is_active.is_(True)).limit(limit)
     if ioc_type:
         query = query.where(IocEntry.ioc_type == ioc_type)
     if min_confidence > 0:
@@ -49,9 +54,13 @@ async def list_iocs(
     result = await db.execute(query)
     return [
         IocSummary(
-            id=i.id, ioc_type=i.ioc_type, value=i.value,
-            confidence=i.confidence, sources=i.sources,
-            is_active=i.is_active, last_seen=i.last_seen,
+            id=i.id,
+            ioc_type=i.ioc_type,
+            value=i.value,
+            confidence=i.confidence,
+            sources=i.sources,
+            is_active=i.is_active,
+            last_seen=i.last_seen,
         )
         for i in result.scalars()
     ]
@@ -80,7 +89,9 @@ async def list_feeds(
 
 @router.get("/ioc-bundle", status_code=status.HTTP_200_OK)
 async def get_ioc_bundle(
-    since: Optional[datetime] = Query(None, description="Only return IOCs updated after this UTC timestamp"),
+    since: Optional[datetime] = Query(
+        None, description="Only return IOCs updated after this UTC timestamp"
+    ),
     x_agent_id: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
@@ -104,13 +115,22 @@ async def get_ioc_bundle(
     lines = []
     for row in rows:
         action = "upsert" if row.is_active else "delete"
-        record: dict = {"action": action, "type": row.ioc_type, "value": row.value_lower}
+        record: dict = {
+            "action": action,
+            "type": row.ioc_type,
+            "value": row.value_lower,
+        }
         if action == "upsert":
             record["score"] = row.score
             record["metadata"] = row.feed_metadata or {}
         lines.append(json.dumps(record, separators=(",", ":")))
 
-    logger.debug("IOC bundle: %d records for agent %s (since=%s)", len(lines), x_agent_id, since)
+    logger.debug(
+        "IOC bundle: %d records for agent %s (since=%s)",
+        len(lines),
+        _safe(x_agent_id),
+        since,
+    )
     return Response(
         content="\n".join(lines),
         media_type="application/x-ndjson",

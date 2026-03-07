@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -16,6 +16,11 @@ from ..models.agent import Agent
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
 
 
 class HealthMetrics(BaseModel):
@@ -46,7 +51,7 @@ class HeartbeatResponse(BaseModel):
 @router.post("/{agent_id}/heartbeat", response_model=HeartbeatResponse)
 async def agent_heartbeat(
     agent_id: str = Path(...),
-    request: HeartbeatRequest = ...,
+    request: HeartbeatRequest = Body(...),
     db: AsyncSession = Depends(get_tenant_session),
 ) -> HeartbeatResponse:
     """
@@ -59,7 +64,9 @@ async def agent_heartbeat(
     agent = result.scalar_one_or_none()
 
     if agent is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     # Update heartbeat data
     agent.last_heartbeat_at = datetime.utcnow()
@@ -74,12 +81,18 @@ async def agent_heartbeat(
 
     # Drain pending commands from Redis for this agent
     raw_commands = await pop_commands(agent_id)
-    commands = [PlatformCommand(type=c["type"], payload={k: v for k, v in c.items() if k != "type"})
-                for c in raw_commands]
+    commands = [
+        PlatformCommand(
+            type=c["type"], payload={k: v for k, v in c.items() if k != "type"}
+        )
+        for c in raw_commands
+    ]
 
     logger.debug(
         "Heartbeat received from agent %s (state: %s, commands: %d)",
-        agent_id, request.state, len(commands),
+        _safe(agent_id),
+        _safe(request.state),
+        len(commands),
     )
 
     return HeartbeatResponse(

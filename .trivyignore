@@ -1,0 +1,14 @@
+# Trivy IaC finding suppressions for the development docker-compose stack.
+# These findings are intentional in the dev environment and do not apply to
+# production (K3s/RKE2 deployments use SecurityContexts + non-root images).
+
+# DS002: Container should not run as root.
+# Dev compose intentionally uses vendor-default users; production Helm charts
+# set securityContext.runAsNonRoot=true and specific runAsUser per service.
+DS002
+
+# DS026 / DS027: No CPU/memory limits set.
+# Resource limits are enforced by K3s LimitRanges in staging/prod. The dev
+# stack runs on a single workstation where limits cause unnecessary friction.
+DS026
+DS027

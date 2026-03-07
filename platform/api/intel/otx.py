@@ -26,13 +26,13 @@ OTX_LOOKBACK_HOURS = 8
 # OTX indicator types mapped to our internal IOC types
 _TYPE_MAP = {
     "FileHash-SHA256": "file_hash",
-    "FileHash-MD5":    None,          # MD5 only — skip; SHA-256 preferred
-    "domain":          "domain",
-    "hostname":        "domain",
-    "IPv4":            "ip_address",
-    "IPv6":            "ip_address",
-    "URL":             "url",
-    "CVE":             "cve",
+    "FileHash-MD5": None,  # MD5 only — skip; SHA-256 preferred
+    "domain": "domain",
+    "hostname": "domain",
+    "IPv4": "ip_address",
+    "IPv6": "ip_address",
+    "URL": "url",
+    "CVE": "cve",
 }
 
 
@@ -46,13 +46,13 @@ async def fetch_otx_iocs() -> list[dict]:
         logger.debug("OTX_API_KEY not set — OTX feed skipped")
         return []
 
-    since = (datetime.now(tz=timezone.utc) - timedelta(hours=OTX_LOOKBACK_HOURS)).strftime(
-        "%Y-%m-%dT%H:%M:%S"
-    )
+    since = (
+        datetime.now(tz=timezone.utc) - timedelta(hours=OTX_LOOKBACK_HOURS)
+    ).strftime("%Y-%m-%dT%H:%M:%S")
 
     headers = {"X-OTX-API-KEY": api_key}
     url = f"{OTX_API_BASE}/pulses/subscribed"
-    params = {"modified_since": since, "limit": 50}
+    params: dict[str, str] = {"modified_since": since, "limit": "50"}
 
     results: list[dict] = []
     seen: set[str] = set()
@@ -69,9 +69,9 @@ async def fetch_otx_iocs() -> list[dict]:
                     pulse_tags = pulse.get("tags", [])
                     created_str = pulse.get("created", "")
                     try:
-                        first_seen = datetime.strptime(created_str[:19], "%Y-%m-%dT%H:%M:%S").replace(
-                            tzinfo=timezone.utc
-                        )
+                        first_seen = datetime.strptime(
+                            created_str[:19], "%Y-%m-%dT%H:%M:%S"
+                        ).replace(tzinfo=timezone.utc)
                     except (ValueError, TypeError):
                         first_seen = datetime.now(tz=timezone.utc)
 
@@ -91,19 +91,23 @@ async def fetch_otx_iocs() -> list[dict]:
                         sources = ["otx"]
                         score = compute_score(sources, first_seen)
 
-                        results.append({
-                            "ioc_type": ioc_type,
-                            "value": value,
-                            "score": score,
-                            "sources": sources,
-                            "tags": pulse_tags,
-                            "first_seen": first_seen,
-                            "metadata": {
-                                "pulse_name": pulse.get("name", ""),
-                                "pulse_id":   pulse.get("id", ""),
-                                "description": (indicator.get("description") or "")[:256],
-                            },
-                        })
+                        results.append(
+                            {
+                                "ioc_type": ioc_type,
+                                "value": value,
+                                "score": score,
+                                "sources": sources,
+                                "tags": pulse_tags,
+                                "first_seen": first_seen,
+                                "metadata": {
+                                    "pulse_name": pulse.get("name", ""),
+                                    "pulse_id": pulse.get("id", ""),
+                                    "description": (indicator.get("description") or "")[
+                                        :256
+                                    ],
+                                },
+                            }
+                        )
 
                 url = data.get("next")  # OTX pagination
     except Exception as exc:

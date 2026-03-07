@@ -24,8 +24,15 @@ import redis.asyncio as aioredis
 logger = logging.getLogger(__name__)
 
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
+
 _CMD_QUEUE_PREFIX = "agent:cmd:"
-_QUEUE_MAX_LEN = 20   # cap per-agent queue to avoid runaway growth
+_QUEUE_MAX_LEN = 20  # cap per-agent queue to avoid runaway growth
 
 
 def _key(agent_id: str) -> str:
@@ -45,7 +52,9 @@ async def push_command(agent_id: str, command: dict) -> None:
         pipe.lpush(_key(agent_id), payload)
         pipe.ltrim(_key(agent_id), 0, _QUEUE_MAX_LEN - 1)
         await pipe.execute()
-        logger.info("Command queued for agent %s: %s", agent_id, command.get("type"))
+        logger.info(
+            "Command queued for agent %s: %s", _safe(agent_id), command.get("type")
+        )
     finally:
         await r.aclose()
 
@@ -59,17 +68,20 @@ async def pop_commands(agent_id: str, max_commands: int = 5) -> list[dict]:
     try:
         commands: list[dict] = []
         for _ in range(max_commands):
-            raw = await r.rpop(_key(agent_id))
+            raw: Optional[str] = await r.rpop(_key(agent_id))  # type: ignore[misc]
             if raw is None:
                 break
             try:
                 commands.append(json.loads(raw))
             except json.JSONDecodeError:
-                logger.warning("Malformed command in queue for agent %s — discarding", agent_id)
+                logger.warning(
+                    "Malformed command in queue for agent %s — discarding",
+                    _safe(agent_id),
+                )
         return commands
     except Exception as exc:
         # Redis failure must not break the heartbeat
-        logger.error("Redis command pop failed for agent %s: %s", agent_id, exc)
+        logger.error("Redis command pop failed for agent %s: %s", _safe(agent_id), exc)
         return []
     finally:
         await r.aclose()

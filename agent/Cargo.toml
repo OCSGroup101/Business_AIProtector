@@ -12,6 +12,10 @@ description = "OpenClaw endpoint security agent"
 repository = "https://github.com/omni-cyber-solutions/openclaw"
 rust-version = "1.77"
 
+[lib]
+name = "openclaw_agent"
+path = "src/lib.rs"
+
 [[bin]]
 name = "openclaw-agent"
 path = "src/main.rs"
@@ -77,7 +81,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # ─── System resource metrics (CPU, RAM) ───────────────────────────────────────
-sysinfo = { version = "0.30", default-features = false, features = ["system"] }
+sysinfo = "0.30"
 
 # ─── File system watching (filesystem collector) ──────────────────────────────
 notify = { version = "6.1", features = ["serde"] }
@@ -92,6 +96,7 @@ windows = { version = "0.57", features = [
     "Win32_Security",
     "Win32_System_Diagnostics_Etw",
     "Win32_System_Threading",
+    "Win32_System_Time",
     "Win32_Storage_FileSystem",
     "Win32_NetworkManagement_IpHelper",
     "Win32_NetworkManagement_WindowsFilteringPlatform",

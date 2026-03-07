@@ -15,7 +15,6 @@ Endpoints:
 import hashlib
 import logging
 import os
-import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -33,6 +32,12 @@ from ..models.tenant import Tenant
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
+
 
 _ADMIN_TOKEN_ENV = "OPENCLAW_ADMIN_TOKEN"
 _DEV_FALLBACK_TOKEN = "dev-admin-token"  # only used when OPENCLAW_DEV_MODE=true
@@ -131,7 +136,9 @@ async def create_tenant(
     await db.execute(text("SELECT create_tenant_schema(:tid)"), {"tid": body.id})
     await db.commit()
 
-    logger.info("Tenant provisioned: id=%s schema=%s", body.id, schema_name)
+    logger.info(
+        "Tenant provisioned: id=%s schema=%s", _safe(body.id), _safe(schema_name)
+    )
 
     return TenantResponse(
         id=tenant.id,
@@ -175,10 +182,17 @@ async def list_tenants(
 
 class CreateTokenRequest(BaseModel):
     tenant_id: str = Field(..., description="Tenant this token grants enrollment into")
-    label: Optional[str] = Field(None, description="Human-readable label for audit purposes")
-    max_uses: int = Field(1, ge=1, le=100, description="Maximum enrollment uses (default: 1)")
+    label: Optional[str] = Field(
+        None, description="Human-readable label for audit purposes"
+    )
+    max_uses: int = Field(
+        1, ge=1, le=100, description="Maximum enrollment uses (default: 1)"
+    )
     expires_hours: int = Field(
-        24, ge=1, le=720, description="Hours until token expires (default: 24, max: 720)"
+        24,
+        ge=1,
+        le=720,
+        description="Hours until token expires (default: 24, max: 720)",
     )
 
 
@@ -248,10 +262,10 @@ async def create_enrollment_token(
     await db.commit()
 
     logger.info(
-        "Enrollment token created: id=%s tenant=%s label=%r expires=%s",
-        token_id,
-        body.tenant_id,
-        body.label,
+        "Enrollment token created: id=%s tenant=%s label=%s expires=%s",
+        _safe(token_id),
+        _safe(body.tenant_id),
+        _safe(body.label),
         expires_at.isoformat(),
     )
 

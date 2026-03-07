@@ -34,7 +34,7 @@ impl std::fmt::Display for ContainmentAction {
 }
 
 impl ContainmentAction {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse_action(s: &str) -> Option<Self> {
         match s {
             "terminate_process" => Some(Self::TerminateProcess),
             "quarantine_file" => Some(Self::QuarantineFile),
@@ -69,8 +69,12 @@ impl ContainmentDispatcher {
     }
 
     /// Dispatch a single containment action by name.
-    pub async fn dispatch(&self, action_name: &str, event: &TelemetryEvent) -> Result<ContainmentResult> {
-        let action = match ContainmentAction::from_str(action_name) {
+    pub async fn dispatch(
+        &self,
+        action_name: &str,
+        event: &TelemetryEvent,
+    ) -> Result<ContainmentResult> {
+        let action = match ContainmentAction::parse_action(action_name) {
             Some(a) => a,
             None => {
                 warn!(action = %action_name, "Unknown containment action — skipping");
@@ -99,14 +103,18 @@ impl ContainmentDispatcher {
         let result = match &action {
             ContainmentAction::TerminateProcess => {
                 use crate::containment::process_kill::terminate_process;
-                let pid = event.payload.get("pid")
+                let pid = event
+                    .payload
+                    .get("pid")
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0) as u32;
                 terminate_process(pid).await
             }
             ContainmentAction::QuarantineFile => {
                 use crate::containment::file_quarantine::quarantine_file;
-                let path = event.payload.get("path")
+                let path = event
+                    .payload
+                    .get("path")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
@@ -114,7 +122,9 @@ impl ContainmentDispatcher {
             }
             ContainmentAction::BlockNetwork => {
                 use crate::containment::network_block::block_network;
-                let ip = event.payload.get("dst_ip")
+                let ip = event
+                    .payload
+                    .get("dst_ip")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
@@ -133,7 +143,10 @@ impl ContainmentDispatcher {
         Ok(ContainmentResult {
             action,
             success: result.is_ok(),
-            message: result.err().map(|e| e.to_string()).unwrap_or_else(|| "Success".to_string()),
+            message: result
+                .err()
+                .map(|e| e.to_string())
+                .unwrap_or_else(|| "Success".to_string()),
             timestamp: chrono::Utc::now(),
         })
     }

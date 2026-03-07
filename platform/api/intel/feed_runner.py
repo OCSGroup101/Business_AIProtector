@@ -21,11 +21,11 @@ from .feed_registry import mark_success, mark_error
 logger = logging.getLogger(__name__)
 
 # Feed intervals in seconds
-MALWAREBAZAAR_INTERVAL = 4 * 3600   # 4 hours
-URLHAUS_INTERVAL       = 2 * 3600   # 2 hours
-CISA_KEV_INTERVAL      = 24 * 3600  # daily
-OTX_INTERVAL           = 4 * 3600   # 4 hours
-ABUSEIPDB_INTERVAL     = 6 * 3600   # 6 hours
+MALWAREBAZAAR_INTERVAL = 4 * 3600  # 4 hours
+URLHAUS_INTERVAL = 2 * 3600  # 2 hours
+CISA_KEV_INTERVAL = 24 * 3600  # daily
+OTX_INTERVAL = 4 * 3600  # 4 hours
+ABUSEIPDB_INTERVAL = 6 * 3600  # 6 hours
 
 
 async def _upsert_iocs(iocs: list[dict]) -> int:
@@ -43,7 +43,9 @@ async def _upsert_iocs(iocs: list[dict]) -> int:
         if not meets_threshold(ioc["score"]):
             continue
         value_lower = ioc["value"].lower()
-        raw_id = hashlib.sha256(f"{ioc['ioc_type']}:{value_lower}".encode()).hexdigest()[:26]
+        raw_id = hashlib.sha256(
+            f"{ioc['ioc_type']}:{value_lower}".encode()
+        ).hexdigest()[:26]
         rows.append(
             {
                 "id": raw_id,

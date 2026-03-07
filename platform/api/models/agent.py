@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, JSON
+from sqlalchemy import Boolean, DateTime, Integer, String, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -16,7 +16,9 @@ class Agent(Base):
     id: Mapped[str] = mapped_column(String(30), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     hostname: Mapped[str] = mapped_column(String(256), nullable=False)
-    os_platform: Mapped[str] = mapped_column(String(32), nullable=False)  # windows|macos|linux
+    os_platform: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # windows|macos|linux
     os_version: Mapped[str] = mapped_column(String(64), nullable=False)
     os_arch: Mapped[str] = mapped_column(String(16), nullable=False)
     agent_version: Mapped[str] = mapped_column(String(32), nullable=False)

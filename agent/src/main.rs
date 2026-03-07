@@ -1,5 +1,7 @@
 // OpenClaw Agent — Entry Point
 // Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+// Phase 1: some modules are scaffolded but not yet fully wired up.
+#![allow(dead_code, unused_variables, unused_mut)]
 
 use anyhow::Result;
 use clap::Parser;
@@ -22,7 +24,12 @@ use crate::core::state::{AgentState, AgentStateManager};
 #[command(name = "openclaw-agent", version, about)]
 struct Cli {
     /// Path to configuration file
-    #[arg(short, long, default_value = "openclaw-agent.toml", env = "OPENCLAW_CONFIG")]
+    #[arg(
+        short,
+        long,
+        default_value = "openclaw-agent.toml",
+        env = "OPENCLAW_CONFIG"
+    )]
     config: String,
 
     /// Override log level (trace/debug/info/warn/error)
@@ -107,17 +114,16 @@ async fn run_enrollment(cfg: &AgentConfig, token: &str) -> Result<()> {
 }
 
 async fn run_agent(cfg: AgentConfig) -> Result<()> {
-    use std::sync::Arc;
-    use crate::core::event_bus::EventBus;
-    use crate::core::scheduler::Scheduler;
     use crate::collectors::CollectorSet;
+    use crate::core::event_bus::EventBus;
     use crate::detection::engine::DetectionEngine;
     use crate::detection::ioc_store::IocStore;
     use crate::platform_connector::alert_uploader::AlertUploader;
     use crate::platform_connector::heartbeat::HeartbeatService;
     use crate::platform_connector::intel_receiver::IntelReceiver;
-    use crate::platform_connector::telemetry_uploader::TelemetryUploader;
     use crate::platform_connector::policy_sync::PolicySync;
+    use crate::platform_connector::telemetry_uploader::TelemetryUploader;
+    use std::sync::Arc;
 
     // Initialize state manager
     let state_manager = AgentStateManager::new(&cfg)?;
@@ -143,10 +149,10 @@ async fn run_agent(cfg: AgentConfig) -> Result<()> {
     let (alert_tx, alert_rx) = tokio::sync::mpsc::channel(1_000);
 
     // Initialize platform connector components
-    let heartbeat = HeartbeatService::new(&cfg, &agent_id, state_manager.clone())?;
+    let (policy_sync, policy_trigger) = PolicySync::new(&cfg, &agent_id)?;
+    let heartbeat = HeartbeatService::new(&cfg, &agent_id, state_manager.clone(), policy_trigger)?;
     let uploader = TelemetryUploader::new(&cfg, &agent_id, &tenant_id, event_bus.subscribe())?;
     let alert_uploader = AlertUploader::new(&cfg, &agent_id, &tenant_id, alert_rx)?;
-    let policy_sync = PolicySync::new(&cfg, &agent_id)?;
     let intel_receiver = IntelReceiver::new(&cfg, &agent_id, &tenant_id, Arc::clone(&ioc_store))?;
 
     // Initialize detection engine (subscribes to event bus, reads from shared IOC store)
@@ -196,10 +202,9 @@ async fn run_agent(cfg: AgentConfig) -> Result<()> {
 }
 
 fn init_tracing(level: &str, format: &str) -> Result<()> {
-    use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(level));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
 
     match format {
         "json" => {

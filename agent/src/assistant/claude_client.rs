@@ -5,7 +5,7 @@
 use anyhow::Result;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 
 const CLAUDE_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MODEL: &str = "claude-haiku-4-5-20251001"; // fast, low-cost for agent use
@@ -71,10 +71,7 @@ impl ClaudeClient {
     }
 
     /// Ask Claude to provide risk coaching for a user behavior.
-    pub async fn coach_behavior(
-        &self,
-        behavior: &str,
-    ) -> Result<String> {
+    pub async fn coach_behavior(&self, behavior: &str) -> Result<String> {
         let prompt = format!(
             "An endpoint user performed the following action: {}\n\
              Explain in 1-2 friendly sentences why this could be risky \
@@ -97,7 +94,8 @@ impl ClaudeClient {
             }],
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(CLAUDE_API_URL)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
@@ -113,7 +111,8 @@ impl ClaudeClient {
         }
 
         let claude_response: ClaudeResponse = response.json().await?;
-        let text = claude_response.content
+        let text = claude_response
+            .content
             .into_iter()
             .next()
             .map(|c| c.text)

@@ -37,9 +37,7 @@ def compute_score(
         return 0.0
 
     # Base weight from highest-weight source present
-    base = max(
-        FEED_BASE_WEIGHTS.get(s, 0.60) for s in sources
-    )
+    base = max(FEED_BASE_WEIGHTS.get(s, 0.60) for s in sources)
 
     # Multi-source bonus
     bonus = MULTI_SOURCE_BONUS if len(sources) >= 2 else 0.0

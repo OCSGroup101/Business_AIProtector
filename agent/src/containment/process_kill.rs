@@ -1,7 +1,7 @@
 // Process termination containment action
 
 use anyhow::Result;
-use tracing::{info, warn};
+use tracing::info;
 
 pub async fn terminate_process(pid: u32) -> Result<()> {
     if pid == 0 {
@@ -22,7 +22,7 @@ pub async fn terminate_process(pid: u32) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 fn terminate_windows(pid: u32) -> Result<()> {
-    use windows::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
 
     unsafe {
@@ -39,11 +39,18 @@ fn terminate_windows(pid: u32) -> Result<()> {
 fn terminate_unix(pid: u32) -> Result<()> {
     use std::process::Command;
 
-    let output = Command::new("kill").arg("-9").arg(pid.to_string()).output()?;
+    let output = Command::new("kill")
+        .arg("-9")
+        .arg(pid.to_string())
+        .output()?;
     if output.status.success() {
         info!(pid, "Process terminated via kill -9");
         Ok(())
     } else {
-        anyhow::bail!("kill -9 {} failed: {}", pid, String::from_utf8_lossy(&output.stderr))
+        anyhow::bail!(
+            "kill -9 {} failed: {}",
+            pid,
+            String::from_utf8_lossy(&output.stderr)
+        )
     }
 }

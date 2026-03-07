@@ -10,8 +10,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
-use crate::core::event_bus::EventType;
-
 // ─── Rule schema ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -20,6 +18,23 @@ pub enum MatchType {
     Ioc,
     Behavioral,
     Heuristic,
+    /// Ordered multi-event sequence within a time window (Phase 2).
+    Sequence,
+    /// Count-based triggering: N matching events per entity within a window (Phase 2).
+    Threshold,
+}
+
+/// One ordered step in a sequence rule.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SequenceStep {
+    /// Event type this step matches (dot or underscore notation accepted).
+    pub event_type: String,
+    /// Field conditions that must ALL match for this step to fire.
+    #[serde(default)]
+    pub conditions: Vec<Condition>,
+    /// How many times this step must fire before advancing. Defaults to 1.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count_threshold: Option<usize>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -48,12 +63,24 @@ pub struct MatchBlock {
     pub event_types: Vec<String>,
     #[serde(default)]
     pub conditions: Vec<Condition>,
-    /// For heuristic rules: window in seconds
+    /// Time window in seconds (heuristic, sequence, and threshold rules).
     #[serde(default)]
     pub window_seconds: u32,
-    /// For heuristic rules: Lua script source
+    /// For heuristic rules: Lua script source.
     #[serde(default)]
     pub lua_script: String,
+    // ── Phase 2 additions ──────────────────────────────────────────────────
+    /// Field path used to group events into per-entity correlation buckets.
+    /// Examples: "principal.user", "hostname", "payload.pid".
+    /// If absent, all events are correlated globally.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub correlation_key: Option<String>,
+    /// For threshold rules: number of matching events required to fire.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub threshold: Option<usize>,
+    /// For sequence rules: ordered list of steps that must all be satisfied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sequence: Option<Vec<SequenceStep>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -156,9 +183,8 @@ impl RuleLoader {
         // Walk all .toml files recursively
         for entry in walkdir_toml(dir) {
             let content = std::fs::read_to_string(&entry)?;
-            let rule_file: RuleFile = toml::from_str(&content).map_err(|e| {
-                anyhow::anyhow!("Failed to parse {}: {}", entry.display(), e)
-            })?;
+            let rule_file: RuleFile = toml::from_str(&content)
+                .map_err(|e| anyhow::anyhow!("Failed to parse {}: {}", entry.display(), e))?;
 
             for rule in rule_file.rules {
                 if !rule.enabled {
@@ -178,9 +204,9 @@ impl RuleLoader {
         match rule.match_block.match_type {
             MatchType::Heuristic if !rule.match_block.lua_script.is_empty() => {
                 let chunk = self.lua.load(&rule.match_block.lua_script);
-                let func: Function = chunk.eval().map_err(|e| {
-                    anyhow::anyhow!("Lua compile error in rule {}: {}", rule.id, e)
-                })?;
+                let func: Function = chunk
+                    .eval()
+                    .map_err(|e| anyhow::anyhow!("Lua compile error in rule {}: {}", rule.id, e))?;
                 let key = self.lua.create_registry_value(func)?;
                 Ok(Some(key))
             }

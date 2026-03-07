@@ -1,11 +1,11 @@
 // Agent state machine: Enrolling → Active → Isolated / Updating
 
 use anyhow::Result;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::config::AgentConfig;
 
@@ -69,11 +69,7 @@ impl AgentStateManager {
     pub fn transition(&self, next: AgentState) -> Result<()> {
         let current = self.current_state();
         if !is_valid_transition(&current, &next) {
-            anyhow::bail!(
-                "Invalid state transition: {} → {}",
-                current,
-                next
-            );
+            anyhow::bail!("Invalid state transition: {} → {}", current, next);
         }
         let inner = self.inner.lock().unwrap();
         set_kv(&inner.conn, "state", &next.to_string())?;
@@ -121,7 +117,7 @@ impl AgentStateManager {
     }
 
     /// Store mTLS cert path after enrollment
-    pub fn set_cert_paths(&self, cert: &PathBuf, key: &PathBuf) -> Result<()> {
+    pub fn set_cert_paths(&self, cert: &Path, key: &Path) -> Result<()> {
         let inner = self.inner.lock().unwrap();
         set_kv(&inner.conn, "client_cert", &cert.to_string_lossy())?;
         set_kv(&inner.conn, "client_key", &key.to_string_lossy())?;
@@ -161,11 +157,9 @@ fn init_schema(conn: &Connection) -> Result<()> {
 }
 
 fn get_kv(conn: &Connection, key: &str) -> Option<String> {
-    conn.query_row(
-        "SELECT value FROM kv WHERE key = ?1",
-        params![key],
-        |row| row.get(0),
-    )
+    conn.query_row("SELECT value FROM kv WHERE key = ?1", params![key], |row| {
+        row.get(0)
+    })
     .ok()
 }
 
@@ -196,6 +190,7 @@ mod tests {
                 telemetry_upload_interval_secs: 300,
                 buffer_upload_threshold_pct: 50,
                 update_signing_pubkey: None,
+                ioc_poll_interval_secs: None,
             },
             storage: crate::config::StorageConfig {
                 data_dir: dir.path().to_path_buf(),

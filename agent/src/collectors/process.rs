@@ -27,7 +27,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::json;
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::collectors::Collector;
 use crate::config::AgentConfig;
@@ -98,7 +98,9 @@ impl Collector for ProcessCollector {
 async fn run_windows(collector: ProcessCollector, publisher: EventPublisher) -> Result<()> {
     match etw::start_session() {
         Ok((session, trace)) => {
-            info!("ETW ProcessCollector started (provider: 22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716)");
+            tracing::info!(
+                "ETW ProcessCollector started (provider: 22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716)"
+            );
             etw::run_relay(collector, publisher, session, trace).await
         }
         Err(e) => {
@@ -120,17 +122,16 @@ mod etw {
     use std::mem;
     use std::sync::mpsc;
 
+    use windows::core::{GUID, PCWSTR, PWSTR};
     use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, ERROR_SUCCESS};
     use windows::Win32::System::Diagnostics::Etw::{
-        CloseTrace, EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW,
-        CONTROLTRACE_HANDLE, EVENT_RECORD, EVENT_TRACE_LOGFILEW, EVENT_TRACE_PROPERTIES,
-        PROCESSTRACE_HANDLE,
+        EnableTraceEx2, OpenTraceW, ProcessTrace, StartTraceW, StopTraceW, CONTROLTRACE_HANDLE,
+        EVENT_RECORD, EVENT_TRACE_LOGFILEW, EVENT_TRACE_PROPERTIES, PROCESSTRACE_HANDLE,
     };
     use windows::Win32::System::Threading::{
         OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
         PROCESS_QUERY_LIMITED_INFORMATION,
     };
-    use windows::core::{GUID, PCWSTR, PWSTR};
 
     // Provider: Microsoft-Windows-Kernel-Process {22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}
     const KERNEL_PROCESS_GUID: GUID = GUID {
@@ -154,9 +155,18 @@ mod etw {
 
     // Session name as a static UTF-16 null-terminated string — pointer lifetime is 'static
     static SESSION_NAME_W: &[u16] = &[
-        b'O' as u16, b'p' as u16, b'e' as u16, b'n' as u16,
-        b'C' as u16, b'l' as u16, b'a' as u16, b'w' as u16,
-        b'E' as u16, b'T' as u16, b'W' as u16, 0u16,
+        b'O' as u16,
+        b'p' as u16,
+        b'e' as u16,
+        b'n' as u16,
+        b'C' as u16,
+        b'l' as u16,
+        b'a' as u16,
+        b'w' as u16,
+        b'E' as u16,
+        b'T' as u16,
+        b'W' as u16,
+        0u16,
     ];
 
     /// Data extracted from a raw ETW ProcessStart/ProcessStop event.
@@ -329,7 +339,7 @@ mod etw {
     pub fn start_session() -> Result<(CONTROLTRACE_HANDLE, Vec<u8>)> {
         let session_name = PCWSTR::from_raw(SESSION_NAME_W.as_ptr());
         let mut buf = alloc_trace_properties();
-        let mut session_handle = CONTROLTRACE_HANDLE(0);
+        let mut session_handle = CONTROLTRACE_HANDLE { Value: 0 };
 
         let props_ptr = buf.as_mut_ptr() as *mut EVENT_TRACE_PROPERTIES;
 
@@ -340,7 +350,8 @@ mod etw {
             // A previous (possibly crashed) agent instance left an ETW session open.
             // Stop it cleanly, then start fresh.
             tracing::debug!("ETW session already exists — stopping and restarting");
-            let _ = unsafe { StopTraceW(CONTROLTRACE_HANDLE(0), session_name, props_ptr) };
+            let _ =
+                unsafe { StopTraceW(CONTROLTRACE_HANDLE { Value: 0 }, session_name, props_ptr) };
 
             // Re-zero the buffer after StopTraceW may have modified it
             buf = alloc_trace_properties();
@@ -365,7 +376,7 @@ mod etw {
                 PROCESS_KEYWORD,
                 0,
                 0,
-                std::ptr::null(),
+                None,
             )
         };
 
@@ -387,19 +398,14 @@ mod etw {
         // LoggerName: non-const PWSTR — ETW won't modify it
         logfile.LoggerName = PWSTR(SESSION_NAME_W.as_ptr() as *mut u16);
 
-        // SAFETY: union field write — ProcessTraceMode and EventRecordCallback are
-        // the only fields we set; the rest remain zero from zeroed().
-        unsafe {
-            logfile.Anonymous1.ProcessTraceMode =
-                PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
-            logfile.Anonymous2.EventRecordCallback = Some(on_event_record);
-        }
+        logfile.Anonymous1.ProcessTraceMode =
+            PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
+        logfile.Anonymous2.EventRecordCallback = Some(on_event_record);
 
         let handle = unsafe { OpenTraceW(&mut logfile) };
 
-        // INVALID_PROCESSTRACE_HANDLE is represented as isize::MAX (0x7FFFFFFF...FF)
-        // on x64, which equals u64::MAX when reinterpreted. Check for the sentinel.
-        if handle.0 == isize::MAX {
+        // INVALID_PROCESSTRACE_HANDLE = (TRACEHANDLE)(ULONG_PTR)(-1) = all bits set = u64::MAX.
+        if handle.Value == u64::MAX {
             anyhow::bail!(
                 "OpenTraceW failed — is the ETW session running? ({})",
                 unsafe { windows::Win32::Foundation::GetLastError().0 }
@@ -443,7 +449,7 @@ mod etw {
                 // blocks here and invokes on_event_record for each event.
                 unsafe {
                     let handles = [trace_handle];
-                    ProcessTrace(handles.as_ptr(), 1, std::ptr::null(), std::ptr::null());
+                    ProcessTrace(&handles, None, None);
                 }
 
                 tracing::debug!("ETW ProcessTrace thread exiting");
@@ -488,14 +494,18 @@ mod etw {
 
         if raw.is_start {
             event.payload.insert("ppid".into(), json!(raw.ppid));
-            event.payload.insert("image_path".into(), json!(&raw.image_path));
+            event
+                .payload
+                .insert("image_path".into(), json!(&raw.image_path));
 
             // Derive short process name from the full path
             let process_name = std::path::Path::new(&raw.image_path)
                 .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("<unknown>");
-            event.payload.insert("process_name".into(), json!(process_name));
+            event
+                .payload
+                .insert("process_name".into(), json!(process_name));
 
             // Compute SHA-256 of the binary for IOC matching
             if let Ok(data) = std::fs::read(&raw.image_path) {
@@ -530,11 +540,17 @@ async fn run_stub(collector: ProcessCollector, publisher: EventPublisher) -> Res
 
         let mut event = collector.make_event(EventType::ProcessCreate);
         event.severity = Severity::Info;
-        event.payload.insert("process_name".into(), json!("stub.exe"));
+        event
+            .payload
+            .insert("process_name".into(), json!("stub.exe"));
         event.payload.insert("pid".into(), json!(1234u32));
         event.payload.insert("ppid".into(), json!(5678u32));
-        event.payload.insert("cmdline".into(), json!("stub.exe --test"));
-        event.payload.insert("image_path".into(), json!("C:\\stub\\stub.exe"));
+        event
+            .payload
+            .insert("cmdline".into(), json!("stub.exe --test"));
+        event
+            .payload
+            .insert("image_path".into(), json!("C:\\stub\\stub.exe"));
         event.payload.insert(
             "hash_sha256".into(),
             json!("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -547,13 +563,13 @@ async fn run_stub(collector: ProcessCollector, publisher: EventPublisher) -> Res
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-fn hostname() -> String {
+pub(crate) fn hostname() -> String {
     std::env::var("COMPUTERNAME")
         .or_else(|_| std::env::var("HOSTNAME"))
         .unwrap_or_else(|_| "unknown".to_string())
 }
 
-fn current_os_info() -> OsInfo {
+pub(crate) fn current_os_info() -> OsInfo {
     OsInfo {
         platform: std::env::consts::OS.to_string(),
         version: os_version(),
@@ -567,9 +583,11 @@ fn os_version() -> String {
         std::fs::read_to_string("/etc/os-release")
             .ok()
             .and_then(|s| {
-                s.lines()
-                    .find(|l| l.starts_with("PRETTY_NAME="))
-                    .map(|l| l.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+                s.lines().find(|l| l.starts_with("PRETTY_NAME=")).map(|l| {
+                    l.trim_start_matches("PRETTY_NAME=")
+                        .trim_matches('"')
+                        .to_string()
+                })
             })
             .unwrap_or_else(|| "Linux".to_string())
     }

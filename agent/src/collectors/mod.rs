@@ -7,7 +7,7 @@ use tokio::task::JoinHandle;
 use tracing::info;
 
 use crate::config::AgentConfig;
-use crate::core::event_bus::{EventPublisher, TelemetryEvent};
+use crate::core::event_bus::EventPublisher;
 
 pub mod auth;
 pub mod filesystem;
@@ -42,26 +42,39 @@ impl CollectorSet {
         let mut collectors: Vec<Box<dyn Collector>> = Vec::new();
 
         if cfg.collectors.process_enabled {
-            collectors.push(Box::new(process::ProcessCollector::new(cfg, agent_id, tenant_id)?));
+            collectors.push(Box::new(process::ProcessCollector::new(
+                cfg, agent_id, tenant_id,
+            )?));
         }
         if cfg.collectors.filesystem_enabled {
-            collectors.push(Box::new(filesystem::FilesystemCollector::new(cfg, agent_id, tenant_id)?));
+            collectors.push(Box::new(filesystem::FilesystemCollector::new(
+                cfg, agent_id, tenant_id,
+            )?));
         }
         if cfg.collectors.network_enabled {
-            collectors.push(Box::new(network::NetworkCollector::new(cfg, agent_id, tenant_id)?));
+            collectors.push(Box::new(network::NetworkCollector::new(
+                cfg, agent_id, tenant_id,
+            )?));
         }
         if cfg.collectors.persistence_enabled {
-            collectors.push(Box::new(persistence::PersistenceCollector::new(cfg, agent_id, tenant_id)?));
+            collectors.push(Box::new(persistence::PersistenceCollector::new(
+                cfg, agent_id, tenant_id,
+            )?));
         }
         if cfg.collectors.auth_enabled {
-            collectors.push(Box::new(auth::AuthCollector::new(cfg, agent_id, tenant_id)?));
+            collectors.push(Box::new(auth::AuthCollector::new(
+                cfg, agent_id, tenant_id,
+            )?));
         }
         if cfg.collectors.integrity_enabled {
             collectors.push(Box::new(integrity::IntegrityCollector::new(cfg)?));
         }
 
         info!(count = collectors.len(), "Collectors initialized");
-        Ok(Self { collectors, publisher })
+        Ok(Self {
+            collectors,
+            publisher,
+        })
     }
 
     /// Run all collectors concurrently. Returns when any collector exits.
@@ -72,9 +85,7 @@ impl CollectorSet {
             let name = collector.name();
             let publisher = self.publisher.clone();
             info!(collector = name, "Starting collector");
-            let handle = tokio::spawn(async move {
-                collector.run(publisher).await
-            });
+            let handle = tokio::spawn(async move { collector.run(publisher).await });
             handles.push(handle);
         }
 

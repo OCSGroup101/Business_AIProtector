@@ -30,7 +30,7 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -59,8 +59,9 @@ def initialize_ca() -> None:
     ca_key_pem = os.environ.get("OPENCLAW_CA_KEY")
     ca_cert_pem = os.environ.get("OPENCLAW_CA_CERT")
     if ca_key_pem and ca_cert_pem:
-        _ca_key = serialization.load_pem_private_key(
-            ca_key_pem.encode(), password=None
+        _ca_key = cast(
+            rsa.RSAPrivateKey,
+            serialization.load_pem_private_key(ca_key_pem.encode(), password=None),
         )
         _ca_cert = x509.load_pem_x509_certificate(ca_cert_pem.encode())
         logger.info("Platform CA loaded from environment variables")
@@ -72,8 +73,9 @@ def initialize_ca() -> None:
     cert_path = pki_dir / "ca.crt"
 
     if key_path.exists() and cert_path.exists():
-        _ca_key = serialization.load_pem_private_key(
-            key_path.read_bytes(), password=None
+        _ca_key = cast(
+            rsa.RSAPrivateKey,
+            serialization.load_pem_private_key(key_path.read_bytes(), password=None),
         )
         _ca_cert = x509.load_pem_x509_certificate(cert_path.read_bytes())
         logger.info("Platform CA loaded from %s", pki_dir)
@@ -107,11 +109,13 @@ def _generate_dev_ca() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
     """Generate a 2048-bit RSA self-signed CA (dev/test only)."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
-    name = x509.Name([
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Omni Cyber Solutions LLC"),
-        x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "OpenClaw Agent CA"),
-        x509.NameAttribute(NameOID.COMMON_NAME, "OpenClaw Dev CA"),
-    ])
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Omni Cyber Solutions LLC"),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, "OpenClaw Agent CA"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "OpenClaw Dev CA"),
+        ]
+    )
 
     now = datetime.now(timezone.utc)
     cert = (
@@ -122,9 +126,7 @@ def _generate_dev_ca() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
         .serial_number(x509.random_serial_number())
         .not_valid_before(now)
         .not_valid_after(now + timedelta(days=3650))
-        .add_extension(
-            x509.BasicConstraints(ca=True, path_length=0), critical=True
-        )
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
         .add_extension(
             x509.KeyUsage(
                 digital_signature=True,
@@ -151,9 +153,7 @@ def _generate_dev_ca() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
 
 def _get_ca() -> tuple[rsa.RSAPrivateKey, x509.Certificate]:
     if _ca_key is None or _ca_cert is None:
-        raise RuntimeError(
-            "PKI not initialized — call pki.initialize_ca() at startup"
-        )
+        raise RuntimeError("PKI not initialized — call pki.initialize_ca() at startup")
     return _ca_key, _ca_cert
 
 
@@ -184,10 +184,14 @@ def sign_agent_csr(csr_pem: str, agent_id: str) -> tuple[str, str, str, datetime
 
     client_cert = (
         x509.CertificateBuilder()
-        .subject_name(x509.Name([
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "OpenClaw Agent"),
-            x509.NameAttribute(NameOID.COMMON_NAME, agent_id),
-        ]))
+        .subject_name(
+            x509.Name(
+                [
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "OpenClaw Agent"),
+                    x509.NameAttribute(NameOID.COMMON_NAME, agent_id),
+                ]
+            )
+        )
         .issuer_name(ca_cert.subject)
         .public_key(csr.public_key())
         .serial_number(serial)
@@ -216,7 +220,9 @@ def sign_agent_csr(csr_pem: str, agent_id: str) -> tuple[str, str, str, datetime
             critical=False,
         )
         .add_extension(
-            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_cert.public_key()),
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(
+                cast(rsa.RSAPublicKey, ca_cert.public_key())
+            ),
             critical=False,
         )
         .sign(ca_key, hashes.SHA256())

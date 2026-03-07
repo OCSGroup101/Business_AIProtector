@@ -192,10 +192,7 @@ impl EventPublisher {
     /// Returns the number of receivers that received the event.
     /// Returns 0 (not an error) if there are no active subscribers.
     pub fn publish(&self, event: TelemetryEvent) -> usize {
-        match self.sender.send(event) {
-            Ok(n) => n,
-            Err(_) => 0, // No receivers — not an error at startup
-        }
+        self.sender.send(event).unwrap_or_default()
     }
 }
 
@@ -218,8 +215,12 @@ mod tests {
         let mut receiver = bus.subscribe();
 
         let event = TelemetryEvent::new(
-            "agt_test", "ten_test", "test_collector",
-            EventType::ProcessCreate, "test-host", make_os(),
+            "agt_test",
+            "ten_test",
+            "test_collector",
+            EventType::ProcessCreate,
+            "test-host",
+            make_os(),
         );
 
         publisher.publish(event.clone());
@@ -236,8 +237,12 @@ mod tests {
         let mut r2 = bus.subscribe();
 
         let event = TelemetryEvent::new(
-            "agt_test", "ten_test", "collector",
-            EventType::FileCreate, "host", make_os(),
+            "agt_test",
+            "ten_test",
+            "collector",
+            EventType::FileCreate,
+            "host",
+            make_os(),
         );
 
         publisher.publish(event.clone());
@@ -259,8 +264,12 @@ mod tests {
         // Flood the channel — receiver will lag
         for _ in 0..5 {
             let e = TelemetryEvent::new(
-                "agt", "ten", "col",
-                EventType::NetworkConnect, "h", make_os(),
+                "agt",
+                "ten",
+                "col",
+                EventType::NetworkConnect,
+                "h",
+                make_os(),
             );
             publisher.publish(e);
         }

@@ -4,19 +4,24 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from ..command_queue import push_command
-from ..database import get_db, get_tenant_session
+from ..database import get_tenant_session
 from ..models.agent import Agent
 from ..middleware.rbac import Permission, require_permission
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _safe(value: object) -> str:
+    """Strip newlines from a value before logging to prevent log injection."""
+    return str(value).replace("\n", "\\n").replace("\r", "\\r")
 
 
 class AgentSummary(BaseModel):
@@ -45,7 +50,7 @@ async def list_agents(
     """List all agents for the current tenant."""
     query = (
         select(Agent)
-        .where(Agent.is_active == True)
+        .where(Agent.is_active.is_(True))
         .order_by(desc(Agent.last_heartbeat_at))
         .limit(limit)
         .offset(offset)
@@ -56,9 +61,13 @@ async def list_agents(
     result = await db.execute(query)
     return [
         AgentSummary(
-            id=a.id, hostname=a.hostname, os_platform=a.os_platform,
-            os_version=a.os_version, agent_version=a.agent_version,
-            state=a.state, last_heartbeat_at=a.last_heartbeat_at,
+            id=a.id,
+            hostname=a.hostname,
+            os_platform=a.os_platform,
+            os_version=a.os_version,
+            agent_version=a.agent_version,
+            state=a.state,
+            last_heartbeat_at=a.last_heartbeat_at,
             policy_version=a.policy_version,
         )
         for a in result.scalars()
@@ -74,11 +83,17 @@ async def get_agent(
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
     return AgentSummary(
-        id=agent.id, hostname=agent.hostname, os_platform=agent.os_platform,
-        os_version=agent.os_version, agent_version=agent.agent_version,
-        state=agent.state, last_heartbeat_at=agent.last_heartbeat_at,
+        id=agent.id,
+        hostname=agent.hostname,
+        os_platform=agent.os_platform,
+        os_version=agent.os_version,
+        agent_version=agent.agent_version,
+        state=agent.state,
+        last_heartbeat_at=agent.last_heartbeat_at,
         policy_version=agent.policy_version,
     )
 
@@ -86,7 +101,7 @@ async def get_agent(
 @router.post("/{agent_id}/isolate", status_code=status.HTTP_202_ACCEPTED)
 async def isolate_agent(
     agent_id: str = Path(...),
-    request: IsolateRequest = ...,
+    request: IsolateRequest = Body(...),
     db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
 ) -> dict:
@@ -94,10 +109,16 @@ async def isolate_agent(
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
     if not agent:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
+        )
 
     await push_command(agent_id, {"type": "isolate", "reason": request.reason})
-    logger.info("Isolation command queued for agent %s (reason: %s)", agent_id, request.reason)
+    logger.info(
+        "Isolation command queued for agent %s (reason: %s)",
+        _safe(agent_id),
+        _safe(request.reason),
+    )
     return {"status": "queued", "agent_id": agent_id}
 
 
@@ -107,7 +128,19 @@ async def lift_isolation(
     db: AsyncSession = Depends(get_tenant_session),
     _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
 ) -> dict:
-    """Queue a lift-isolation command."""
+    """Queue a lift-isolation command (DELETE semantics)."""
     await push_command(agent_id, {"type": "lift_isolation"})
-    logger.info("Lift-isolation command queued for agent %s", agent_id)
+    logger.info("Lift-isolation command queued for agent %s", _safe(agent_id))
+    return {"status": "queued", "agent_id": agent_id}
+
+
+@router.post("/{agent_id}/unisolate", status_code=status.HTTP_202_ACCEPTED)
+async def unisolate_agent(
+    agent_id: str = Path(...),
+    db: AsyncSession = Depends(get_tenant_session),
+    _role=Depends(require_permission(Permission.CONTAINMENT_APPLY)),
+) -> dict:
+    """Queue a lift-isolation command (POST alias for console compatibility)."""
+    await push_command(agent_id, {"type": "lift_isolation"})
+    logger.info("Unisolate command queued for agent %s", _safe(agent_id))
     return {"status": "queued", "agent_id": agent_id}

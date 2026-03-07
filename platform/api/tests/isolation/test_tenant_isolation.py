@@ -17,9 +17,11 @@ PLATFORM_URL = os.environ.get("PLATFORM_URL", "http://localhost:8888")
 
 # Fixture tokens — in CI, these are real Keycloak JWTs for test tenants
 # For Phase 0: placeholder JWTs; isolation test logic is complete
-TENANT_A_ADMIN_TOKEN = os.environ.get("TEST_TENANT_A_TOKEN", "tenant_a_placeholder")
-TENANT_B_ADMIN_TOKEN = os.environ.get("TEST_TENANT_B_TOKEN", "tenant_b_placeholder")
-TENANT_A_AUDITOR_TOKEN = os.environ.get("TEST_TENANT_A_AUDITOR_TOKEN", "auditor_placeholder")
+TENANT_A_ADMIN_TOKEN = os.environ.get("TEST_TENANT_A_TOKEN", "dev-admin-token")
+TENANT_B_ADMIN_TOKEN = os.environ.get("TEST_TENANT_B_TOKEN", "dev-admin-token")
+TENANT_A_AUDITOR_TOKEN = os.environ.get(
+    "TEST_TENANT_A_AUDITOR_TOKEN", "dev-auditor-token"
+)
 
 TENANT_A_INCIDENT_ID = os.environ.get("TEST_TENANT_A_INCIDENT_ID", "inc_test_tenant_a")
 
@@ -86,7 +88,10 @@ class TestTenantIsolation:
     def test_tenant_a_incidents_visible_to_tenant_a(self, client_tenant_a):
         """Sanity check: Tenant A can access its own incidents."""
         response = client_tenant_a.get("/api/v1/incidents")
-        assert response.status_code in (200, 401)  # 401 = test token not valid, OK in Phase 0
+        assert response.status_code in (
+            200,
+            401,
+        )  # 401 = test token not valid, OK in Phase 0
 
 
 class TestRBACIsolation:
@@ -108,7 +113,10 @@ class TestRBACIsolation:
     def test_auditor_can_read_audit_logs(self, client_auditor):
         """Auditor must be able to read audit logs (sanity check)."""
         response = client_auditor.get("/api/v1/audit")
-        assert response.status_code in (200, 401)  # 401 OK in Phase 0 without real tokens
+        assert response.status_code in (
+            200,
+            401,
+        )  # 401 OK in Phase 0 without real tokens
 
     def test_auditor_cannot_create_policy(self, client_auditor):
         """Auditor must not be able to create policies."""
@@ -132,7 +140,9 @@ class TestTelemetryPartitioning:
         fake_tenant_a_agent_id = "agt_tenant_a_00001"
         response = client_tenant_b.post(
             "/api/v1/telemetry/batch",
-            content=b'{"agent_id": "' + fake_tenant_a_agent_id.encode() + b'", "event_type": "process.create"}\n',
+            content=b'{"agent_id": "'
+            + fake_tenant_a_agent_id.encode()
+            + b'", "event_type": "process.create"}\n',
             headers={
                 "Content-Type": "application/x-ndjson",
                 "X-Agent-ID": fake_tenant_a_agent_id,

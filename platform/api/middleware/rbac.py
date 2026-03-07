@@ -7,7 +7,6 @@ Permission enforcement via FastAPI dependencies.
 
 import os
 from enum import Enum
-from functools import wraps
 from typing import Callable, Optional
 
 from fastapi import Depends, HTTPException, Request, status
@@ -44,21 +43,31 @@ class Permission(str, Enum):
 # Permission matrix
 _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
     Role.TENANT_ADMIN: {
-        Permission.AGENTS_READ, Permission.AGENTS_WRITE,
-        Permission.POLICIES_READ, Permission.POLICIES_WRITE,
+        Permission.AGENTS_READ,
+        Permission.AGENTS_WRITE,
+        Permission.POLICIES_READ,
+        Permission.POLICIES_WRITE,
         Permission.CONTAINMENT_APPLY,
-        Permission.INCIDENTS_READ, Permission.INCIDENTS_WRITE, Permission.INCIDENTS_RESOLVE,
+        Permission.INCIDENTS_READ,
+        Permission.INCIDENTS_WRITE,
+        Permission.INCIDENTS_RESOLVE,
         Permission.USERS_MANAGE,
         Permission.AUDIT_READ,
-        Permission.INTEL_READ, Permission.INTEL_WRITE,
+        Permission.INTEL_READ,
+        Permission.INTEL_WRITE,
     },
     Role.SECURITY_ADMIN: {
-        Permission.AGENTS_READ, Permission.AGENTS_WRITE,
-        Permission.POLICIES_READ, Permission.POLICIES_WRITE,
+        Permission.AGENTS_READ,
+        Permission.AGENTS_WRITE,
+        Permission.POLICIES_READ,
+        Permission.POLICIES_WRITE,
         Permission.CONTAINMENT_APPLY,
-        Permission.INCIDENTS_READ, Permission.INCIDENTS_WRITE, Permission.INCIDENTS_RESOLVE,
+        Permission.INCIDENTS_READ,
+        Permission.INCIDENTS_WRITE,
+        Permission.INCIDENTS_RESOLVE,
         Permission.AUDIT_READ,
-        Permission.INTEL_READ, Permission.INTEL_WRITE,
+        Permission.INTEL_READ,
+        Permission.INTEL_WRITE,
     },
     Role.HELPDESK: {
         Permission.AGENTS_READ,
@@ -76,15 +85,31 @@ _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
 }
 
 
+# Well-known dev tokens → role mapping (dev mode only, never in production).
+# Tests use these tokens to exercise RBAC without a live Keycloak instance.
+_DEV_TOKEN_ROLES: dict[str, Role] = {
+    "dev-admin-token": Role.TENANT_ADMIN,
+    "dev-security-token": Role.SECURITY_ADMIN,
+    "dev-helpdesk-token": Role.HELPDESK,
+    "dev-auditor-token": Role.AUDITOR,
+}
+
+
 def get_current_user_role(request: Request) -> Role:
     """
     Extract the user's role from the JWT claim.
     In production this is validated by Kong; here we decode from request state.
 
     Dev bypass: set OPENCLAW_DEV_MODE=true to skip auth and grant tenant_admin.
+    Named dev tokens (dev-auditor-token, etc.) map to specific roles for RBAC tests.
     Never enable this in production.
     """
     if os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+            if token in _DEV_TOKEN_ROLES:
+                return _DEV_TOKEN_ROLES[token]
         return Role.TENANT_ADMIN
 
     role_str = getattr(request.state, "user_role", None)
@@ -111,6 +136,7 @@ def get_current_user_role(request: Request) -> Role:
 
 def require_permission(permission: Permission) -> Callable:
     """FastAPI dependency factory — raises 403 if role lacks the permission."""
+
     def dependency(role: Role = Depends(get_current_user_role)) -> Role:
         if permission not in _ROLE_PERMISSIONS.get(role, set()):
             raise HTTPException(
@@ -118,6 +144,7 @@ def require_permission(permission: Permission) -> Callable:
                 detail=f"Role '{role}' does not have permission '{permission}'",
             )
         return role
+
     return dependency
 
 
@@ -146,4 +173,5 @@ def _extract_role_from_jwt(token: str) -> Optional[str]:
 
 class RBACMiddleware:
     """Placeholder — RBAC is enforced per-route via Depends(require_permission(...))."""
+
     pass

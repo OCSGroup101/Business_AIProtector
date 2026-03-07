@@ -80,26 +80,29 @@ async def fetch_blacklist() -> list[dict]:
         if confidence >= 90:
             tags.append("high_confidence")
 
-        results.append({
-            "ioc_type": "ip_address",
-            "value": ip,
-            "score": score,
-            "sources": sources,
-            "tags": tags,
-            "first_seen": now,
-            "metadata": {
-                "abuse_confidence": confidence,
-                "country_code":     country,
-                "usage_type":       usage_type,
-                "isp":              isp,
-                "domain":           domain,
-                "total_reports":    entry.get("totalReports", 0),
-                "last_reported_at": entry.get("lastReportedAt", ""),
-            },
-        })
+        results.append(
+            {
+                "ioc_type": "ip_address",
+                "value": ip,
+                "score": score,
+                "sources": sources,
+                "tags": tags,
+                "first_seen": now,
+                "metadata": {
+                    "abuse_confidence": confidence,
+                    "country_code": country,
+                    "usage_type": usage_type,
+                    "isp": isp,
+                    "domain": domain,
+                    "total_reports": entry.get("totalReports", 0),
+                    "last_reported_at": entry.get("lastReportedAt", ""),
+                },
+            }
+        )
 
     logger.info(
         "AbuseIPDB: fetched %d IPs (confidence >= %d%%)",
-        len(results), CONFIDENCE_THRESHOLD,
+        len(results),
+        CONFIDENCE_THRESHOLD,
     )
     return results
