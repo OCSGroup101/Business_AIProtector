@@ -106,7 +106,7 @@ async def health_check() -> dict:
     return {"status": "healthy", "version": "0.1.0"}
 
 
-@app.get("/health/ready", tags=["health"])
+@app.get("/health/ready", tags=["health"], response_model=None)
 async def readiness_check() -> dict | JSONResponse:
     """Readiness check — verifies database connectivity."""
     from .database import check_db_connection
