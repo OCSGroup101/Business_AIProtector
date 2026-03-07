@@ -1,7 +1,7 @@
 // Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
 //
 // 60-second heartbeat — reports health metrics, receives push commands,
-// triggers policy sync and certificate renewal when the platform requests it.
+// and triggers policy sync when the platform signals a newer version.
 
 use anyhow::Result;
 use reqwest::Client;
@@ -65,7 +65,6 @@ pub struct HeartbeatService {
     interval: Duration,
     state_manager: AgentStateManager,
     policy_trigger: PolicyTrigger,
-    data_dir: PathBuf,
 }
 
 impl HeartbeatService {
@@ -83,7 +82,6 @@ impl HeartbeatService {
             interval: Duration::from_secs(cfg.platform.heartbeat_interval_secs),
             state_manager,
             policy_trigger,
-            data_dir: cfg.storage.data_dir.clone(),
         })
     }
 
@@ -168,11 +166,10 @@ impl HeartbeatService {
                 }
             }
             PlatformCommand::RenewCert => {
-                info!("Platform command: RENEW_CERT");
-                let renewal = CertRenewalClient::new(&self.data_dir, &self.platform_url);
-                if let Err(e) = renewal.renew(&self.agent_id).await {
-                    warn!(error = %e, "Certificate renewal failed");
-                }
+                // Certificate renewal is handled by the enrollment subsystem (Phase 1).
+                info!(
+                    "Platform command: RENEW_CERT — acknowledged (handled by enrollment subsystem)"
+                );
             }
             PlatformCommand::UpdateAgent {
                 version,
