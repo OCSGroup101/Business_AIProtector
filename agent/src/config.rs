@@ -33,6 +33,10 @@ pub struct AgentConfig {
     /// Assistant / TTS settings
     #[serde(default)]
     pub assistant: AssistantConfig,
+
+    /// Kafka streaming configuration (optional; HTTP fallback used when absent)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kafka: Option<crate::platform_connector::kafka_producer::KafkaConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

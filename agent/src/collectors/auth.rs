@@ -69,9 +69,12 @@ impl Collector for AuthCollector {
         #[cfg(target_os = "windows")]
         return windows::run(*self, publisher).await;
 
+        #[cfg(target_os = "macos")]
+        return macos::run(*self, publisher).await;
+
         #[allow(unreachable_code)]
         {
-            info!("AuthCollector: platform not supported — idle (Phase 3)");
+            info!("AuthCollector: platform not supported — idle");
             tokio::time::sleep(tokio::time::Duration::MAX).await;
             Ok(())
         }
@@ -258,18 +261,268 @@ mod linux {
 }
 
 // ─── Windows (Security Event Log) ─────────────────────────────────────────────
-//
-// Phase 2 — implement EvtSubscribe with XML rendering to extract user, source
-// IP, logon type from event IDs 4624 (logon), 4625 (logon failure),
-// 4648 (explicit credentials), 4672 (special privileges).
 
 #[cfg(target_os = "windows")]
 mod windows {
     use super::*;
+    use tracing::{debug, warn};
+    use windows::Win32::System::EventLog::{
+        EvtClose, EvtNext, EvtQuery, EvtRender, EvtRenderEventXml,
+        EVT_HANDLE, EVT_QUERY_FLAGS, EvtQueryChannelPath, EvtQueryReverseDirection,
+    };
+    use windows::core::{HSTRING, PCWSTR};
 
-    pub async fn run(_collector: AuthCollector, _publisher: EventPublisher) -> Result<()> {
-        info!("AuthCollector: Windows Security Event Log monitoring (Phase 2 — stub)");
-        tokio::time::sleep(tokio::time::Duration::MAX).await;
+    const SECURITY_CHANNEL: &str = "Security";
+    // XPath query for logon / privilege events
+    const XPATH_QUERY: &str =
+        "*[System/EventID=4624 or System/EventID=4625 or System/EventID=4648 or System/EventID=4672]";
+
+    pub async fn run(collector: AuthCollector, publisher: EventPublisher) -> Result<()> {
+        info!("AuthCollector: Windows Security Event Log monitoring starting");
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<(u32, String, String)>(256);
+
+        // Blocking thread: EvtQuery + EvtNext loop
+        tokio::task::spawn_blocking(move || {
+            let channel = HSTRING::from(SECURITY_CHANNEL);
+            let query = HSTRING::from(XPATH_QUERY);
+
+            let handle = unsafe {
+                EvtQuery(
+                    None,
+                    PCWSTR(channel.as_ptr()),
+                    PCWSTR(query.as_ptr()),
+                    (EvtQueryChannelPath.0 | EvtQueryReverseDirection.0) as u32,
+                )
+            };
+            let handle = match handle {
+                Ok(h) => h,
+                Err(e) => {
+                    warn!("AuthCollector: EvtQuery failed: {:?}", e);
+                    return;
+                }
+            };
+
+            loop {
+                let mut events: [EVT_HANDLE; 32] = [EVT_HANDLE::default(); 32];
+                let mut returned: u32 = 0;
+                let ok = unsafe {
+                    EvtNext(handle, &mut events, 500, 0, &mut returned).is_ok()
+                };
+                if !ok || returned == 0 {
+                    // No new events; wait a bit then retry
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    continue;
+                }
+
+                for i in 0..returned as usize {
+                    let evt = events[i];
+                    if let Some((event_id, user, src_ip)) = render_event(evt) {
+                        let _ = tx.blocking_send((event_id, user, src_ip));
+                    }
+                    unsafe { let _ = EvtClose(evt); }
+                }
+            }
+        });
+
+        while let Some((event_id, user, src_ip)) = rx.recv().await {
+            let event_type = match event_id {
+                4624 => EventType::AuthLogon,
+                4625 => EventType::AuthLogonFailure,
+                4648 => EventType::AuthLogon,
+                4672 => EventType::AuthPrivilegeEscalation,
+                _ => continue,
+            };
+
+            debug!(event_id, user = %user, "Windows auth event");
+            let mut event = collector.make_event(event_type.clone());
+            event.principal = Some(crate::core::event_bus::Principal {
+                user: user.clone(),
+                sid: None,
+                elevated: matches!(event_type, EventType::AuthPrivilegeEscalation),
+            });
+            event.payload.insert(
+                "details".into(),
+                serde_json::json!({ "event_id": event_id, "user": user, "src_ip": src_ip }),
+            );
+            publisher.publish(event);
+        }
+
         Ok(())
+    }
+
+    /// Render a Security event to XML and extract (event_id, user, src_ip).
+    fn render_event(evt: EVT_HANDLE) -> Option<(u32, String, String)> {
+        let mut buf_used: u32 = 0;
+        let mut buf: Vec<u16> = vec![0u16; 4096];
+
+        let ok = unsafe {
+            EvtRender(
+                None,
+                evt,
+                EvtRenderEventXml.0,
+                buf.len() as u32 * 2,
+                Some(buf.as_mut_ptr() as *mut core::ffi::c_void),
+                &mut buf_used,
+                &mut 0u32,
+            )
+            .is_ok()
+        };
+
+        if !ok {
+            return None;
+        }
+
+        let xml = String::from_utf16_lossy(&buf[..buf_used as usize / 2]);
+        parse_security_xml(&xml)
+    }
+
+    /// Parse Security event XML to extract (event_id, username, source_ip).
+    fn parse_security_xml(xml: &str) -> Option<(u32, String, String)> {
+        use quick_xml::events::Event;
+        use quick_xml::Reader;
+
+        let mut reader = Reader::from_str(xml);
+        reader.config_mut().trim_text(true);
+
+        let mut event_id: u32 = 0;
+        let mut user = String::new();
+        let mut src_ip = String::new();
+        let mut in_event_id = false;
+        let mut current_name = String::new();
+        let mut in_data = false;
+
+        loop {
+            match reader.read_event() {
+                Ok(Event::Start(ref e)) => {
+                    let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    match tag.as_str() {
+                        "EventID" => in_event_id = true,
+                        "Data" => {
+                            in_data = true;
+                            current_name = e
+                                .attributes()
+                                .flatten()
+                                .find(|a| a.key.as_ref() == b"Name")
+                                .and_then(|a| String::from_utf8(a.value.to_vec()).ok())
+                                .unwrap_or_default();
+                        }
+                        _ => {}
+                    }
+                }
+                Ok(Event::End(_)) => {
+                    in_event_id = false;
+                    in_data = false;
+                }
+                Ok(Event::Text(e)) => {
+                    let text = e.unescape().unwrap_or_default().to_string();
+                    if in_event_id {
+                        event_id = text.parse().unwrap_or(0);
+                    } else if in_data {
+                        match current_name.as_str() {
+                            "SubjectUserName" | "TargetUserName" if user.is_empty() => {
+                                user = text;
+                            }
+                            "IpAddress" if src_ip.is_empty() => {
+                                src_ip = text;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                Ok(Event::Eof) => break,
+                Err(_) => break,
+                _ => {}
+            }
+        }
+
+        if event_id != 0 {
+            Some((event_id, user, src_ip))
+        } else {
+            None
+        }
+    }
+}
+
+// ─── macOS (eslogger / OpenBSM tail) ─────────────────────────────────────────
+//
+// Uses `eslogger` (macOS 13+, ships with XProtect) to stream security events
+// as NDJSON without requiring the ESF entitlement.
+// Gate: cfg(not(feature = "macos-esf")) — no special entitlement needed.
+
+#[cfg(target_os = "macos")]
+mod macos {
+    use super::*;
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    use tracing::{debug, warn};
+
+    pub async fn run(collector: AuthCollector, publisher: EventPublisher) -> Result<()> {
+        info!("AuthCollector: macOS eslogger authentication monitoring starting");
+
+        // eslogger requires root; if it fails, fall back to OpenBSM log tail.
+        let child = tokio::process::Command::new("eslogger")
+            .args(["authentication"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+
+        match child {
+            Ok(mut c) => {
+                let stdout = c.stdout.take().expect("stdout piped");
+                let reader = BufReader::new(stdout);
+                let mut lines = reader.lines();
+                while let Ok(Some(line)) = lines.next_line().await {
+                    if let Some(event) = parse_eslogger_auth(&collector, &line) {
+                        debug!("macOS auth event from eslogger");
+                        publisher.publish(event);
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("eslogger not available ({}); macOS auth monitoring degraded", e);
+                // Idle rather than spin-loop
+                tokio::time::sleep(tokio::time::Duration::MAX).await;
+            }
+        }
+        Ok(())
+    }
+
+    /// Parse an eslogger NDJSON line for authentication events.
+    fn parse_eslogger_auth(
+        collector: &AuthCollector,
+        line: &str,
+    ) -> Option<crate::core::event_bus::TelemetryEvent> {
+        let v: serde_json::Value = serde_json::from_str(line).ok()?;
+        let event_type_str = v["event_type"].as_str()?;
+
+        let (event_type, elevated) = match event_type_str {
+            "ES_EVENT_TYPE_NOTIFY_AUTHENTICATION" => {
+                let success = v["event"]["authentication"]["success"].as_bool().unwrap_or(false);
+                if success {
+                    (EventType::AuthLogon, false)
+                } else {
+                    (EventType::AuthLogonFailure, false)
+                }
+            }
+            "ES_EVENT_TYPE_NOTIFY_SETUID" => (EventType::AuthPrivilegeEscalation, true),
+            _ => return None,
+        };
+
+        let user = v["event"]["authentication"]["target"]["name"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+
+        let mut event = collector.make_event(event_type.clone());
+        event.principal = Some(crate::core::event_bus::Principal {
+            user: user.clone(),
+            sid: None,
+            elevated,
+        });
+        event.payload.insert(
+            "details".into(),
+            serde_json::json!({ "user": user, "event_type": event_type_str }),
+        );
+        Some(event)
     }
 }

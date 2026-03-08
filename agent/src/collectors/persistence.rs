@@ -170,6 +170,21 @@ impl Collector for PersistenceCollector {
 }
 
 /// Platform-specific persistence paths to watch.
+#[cfg(target_os = "macos")]
+fn platform_persistence_paths() -> Vec<PathBuf> {
+    let mut paths = vec![
+        PathBuf::from("/Library/LaunchDaemons"),
+        PathBuf::from("/Library/LaunchAgents"),
+        PathBuf::from("/System/Library/LaunchDaemons"),
+        PathBuf::from("/System/Library/LaunchAgents"),
+    ];
+    if let Ok(home) = std::env::var("HOME") {
+        paths.push(PathBuf::from(format!("{}/Library/LaunchAgents", home)));
+    }
+    paths
+}
+
+#[cfg(not(target_os = "macos"))]
 fn platform_persistence_paths() -> Vec<PathBuf> {
     #[cfg(target_os = "linux")]
     return vec![
@@ -222,7 +237,200 @@ fn classify_mechanism(path: &std::path::Path) -> &'static str {
         "scheduled_task"
     } else if s.contains("Startup") {
         "startup_folder"
+    } else if s.contains("LaunchDaemon") || s.contains("LaunchAgent") {
+        "launchd"
+    } else if s.contains("Run") || s.contains("SOFTWARE\\Microsoft\\Windows\\CurrentVersion") {
+        "registry_run_key"
     } else {
         "unknown"
+    }
+}
+
+// ─── Windows Registry Run Key Watcher ─────────────────────────────────────────
+
+#[cfg(target_os = "windows")]
+pub mod registry {
+    use super::*;
+    use std::collections::HashMap;
+    use windows::Win32::System::Registry::{
+        RegCloseKey, RegEnumValueW, RegNotifyChangeKeyValue, RegOpenKeyExW,
+        HKEY, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE,
+        KEY_NOTIFY, KEY_READ, REG_NOTIFY_CHANGE_LAST_SET, REG_SZ,
+    };
+    use windows::core::PCWSTR;
+    use tracing::{debug, warn};
+
+    const RUN_KEYS: &[(&str, &str)] = &[
+        (r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "HKLM"),
+        (r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce", "HKLM"),
+        (r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", "HKCU"),
+        (r"SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce", "HKCU"),
+    ];
+
+    /// Snapshot of a single registry key (value_name → value_data).
+    type KeySnapshot = HashMap<String, String>;
+
+    pub async fn watch_run_keys(
+        collector: PersistenceCollector,
+        publisher: EventPublisher,
+    ) -> Result<()> {
+        info!("Registry Run key watcher starting");
+        let (tx, mut rx) =
+            tokio::sync::mpsc::channel::<(String, String, &'static str)>(64);
+
+        tokio::task::spawn_blocking(move || {
+            // Take initial snapshot for each key and then watch for changes
+            let mut snapshots: HashMap<(&str, &str), KeySnapshot> = HashMap::new();
+
+            for (key_path, hive) in RUN_KEYS {
+                let hkey = if *hive == "HKLM" {
+                    HKEY_LOCAL_MACHINE
+                } else {
+                    HKEY_CURRENT_USER
+                };
+                if let Some(snapshot) = read_run_key(hkey, key_path) {
+                    snapshots.insert((key_path, hive), snapshot);
+                }
+            }
+
+            loop {
+                // Open each key for notification
+                for (key_path, hive) in RUN_KEYS {
+                    let hkey = if *hive == "HKLM" {
+                        HKEY_LOCAL_MACHINE
+                    } else {
+                        HKEY_CURRENT_USER
+                    };
+                    let path_wide: Vec<u16> = key_path.encode_utf16().chain(Some(0)).collect();
+
+                    let mut hkey_open = HKEY::default();
+                    let open_ok = unsafe {
+                        RegOpenKeyExW(
+                            hkey,
+                            PCWSTR(path_wide.as_ptr()),
+                            0,
+                            KEY_READ | KEY_NOTIFY,
+                            &mut hkey_open,
+                        )
+                    };
+                    if open_ok.is_err() {
+                        continue;
+                    }
+
+                    // Block up to 5s for changes; then poll
+                    let _ = unsafe {
+                        RegNotifyChangeKeyValue(
+                            hkey_open,
+                            false,
+                            REG_NOTIFY_CHANGE_LAST_SET,
+                            None,
+                            false,
+                        )
+                    };
+                    unsafe { let _ = RegCloseKey(hkey_open); }
+
+                    // Compare new snapshot vs old
+                    let new_snap = match read_run_key(hkey, key_path) {
+                        Some(s) => s,
+                        None => continue,
+                    };
+                    let old_snap = snapshots
+                        .entry((key_path, hive))
+                        .or_default();
+
+                    for (name, data) in &new_snap {
+                        let kind = if old_snap.contains_key(name) {
+                            if old_snap.get(name) != Some(data) {
+                                "modify"
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            "create"
+                        };
+                        let full_path = format!(
+                            "{}\\{}\\{}",
+                            hive, key_path, name
+                        );
+                        debug!(path = %full_path, kind, "Registry run key change detected");
+                        let _ = tx.blocking_send((full_path, data.clone(), kind));
+                    }
+                    *old_snap = new_snap;
+                }
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        });
+
+        while let Some((path, data, kind)) = rx.recv().await {
+            let event_type = if kind == "create" {
+                EventType::PersistenceCreate
+            } else {
+                EventType::PersistenceModify
+            };
+            let mut event = collector.make_event(event_type);
+            event.payload.insert("path".into(), json!(path));
+            event.payload.insert("data".into(), json!(data));
+            event.payload.insert("mechanism".into(), json!("registry_run_key"));
+            publisher.publish(event);
+        }
+
+        Ok(())
+    }
+
+    /// Read all string values from a registry run key into a HashMap.
+    fn read_run_key(hive: HKEY, key_path: &str) -> Option<KeySnapshot> {
+        let path_wide: Vec<u16> = key_path.encode_utf16().chain(Some(0)).collect();
+        let mut hkey_open = HKEY::default();
+
+        unsafe {
+            RegOpenKeyExW(
+                hive,
+                PCWSTR(path_wide.as_ptr()),
+                0,
+                KEY_READ,
+                &mut hkey_open,
+            )
+        }.ok()?;
+
+        let mut result = HashMap::new();
+        let mut index: u32 = 0;
+        loop {
+            let mut name_buf = vec![0u16; 256];
+            let mut name_len = name_buf.len() as u32;
+            let mut data_buf = vec![0u8; 1024];
+            let mut data_len = data_buf.len() as u32;
+            let mut value_type = 0u32;
+
+            let status = unsafe {
+                RegEnumValueW(
+                    hkey_open,
+                    index,
+                    windows::core::PWSTR(name_buf.as_mut_ptr()),
+                    &mut name_len,
+                    None,
+                    Some(&mut value_type),
+                    Some(data_buf.as_mut_ptr()),
+                    Some(&mut data_len),
+                )
+            };
+            if status.is_err() {
+                break;
+            }
+            if value_type == REG_SZ.0 {
+                let name = String::from_utf16_lossy(&name_buf[..name_len as usize]);
+                let data_u16: Vec<u16> = data_buf[..data_len as usize]
+                    .chunks_exact(2)
+                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .collect();
+                let data = String::from_utf16_lossy(&data_u16)
+                    .trim_end_matches('\0')
+                    .to_string();
+                result.insert(name, data);
+            }
+            index += 1;
+        }
+
+        unsafe { let _ = RegCloseKey(hkey_open); }
+        Some(result)
     }
 }

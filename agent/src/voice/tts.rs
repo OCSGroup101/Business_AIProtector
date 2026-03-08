@@ -57,22 +57,57 @@ fn parse_severity(s: &str) -> Severity {
     }
 }
 
-// ─── Windows SAPI 5 ──────────────────────────────────────────────────────────
+// ─── Windows SAPI 5 (ISpVoice COM) ───────────────────────────────────────────
 
 #[cfg(target_os = "windows")]
 fn speak_windows(text: &str) -> Result<()> {
-    // Phase 2: Implement via ISpVoice COM interface.
-    // For Phase 0/1: use PowerShell as a quick bootstrap.
-    use std::process::Command;
-    let script = format!(
-        "Add-Type -AssemblyName System.Speech; \
-         $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; \
-         $s.Speak('{}');",
-        text.replace('\'', "''")
-    );
-    Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-        .status()?;
+    use windows::Win32::Media::Speech::{ISpVoice, SpVoice, SPEI_END_INPUT_STREAM};
+    use windows::Win32::System::Com::{
+        CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL,
+        COINIT_MULTITHREADED,
+    };
+    use windows::core::HSTRING;
+
+    // SAFETY: CoInitializeEx is safe to call from any thread. We always pair
+    // it with CoUninitialize via the guard below. COINIT_MULTITHREADED is the
+    // correct flag for async agent code; nested calls (already-initialized
+    // threads) return S_FALSE which we tolerate.
+    let hr_init = unsafe { CoInitializeEx(None, COINIT_MULTITHREADED) };
+    let com_initialized = hr_init.is_ok();
+
+    struct ComGuard(bool);
+    impl Drop for ComGuard {
+        fn drop(&mut self) {
+            if self.0 {
+                // SAFETY: CoUninitialize must be called exactly once per
+                // successful CoInitializeEx — the guard ensures this pairing.
+                unsafe { CoUninitialize() };
+            }
+        }
+    }
+    let _guard = ComGuard(com_initialized);
+
+    // SAFETY: CoCreateInstance is safe when COM is initialized (ensured above).
+    // SpVoice is a well-known CLSID documented by Microsoft; CLSCTX_ALL is the
+    // standard context for in-process COM servers. The returned interface pointer
+    // is reference-counted and released automatically when `voice` is dropped.
+    let voice: ISpVoice = unsafe {
+        CoCreateInstance(&SpVoice, None, CLSCTX_ALL)
+            .map_err(|e| anyhow::anyhow!("CoCreateInstance(SpVoice) failed: {:?}", e))?
+    };
+
+    let wide = HSTRING::from(text);
+
+    // SAFETY: Speak is a COM method on a valid ISpVoice interface. The HSTRING
+    // outlives the Speak call. SPF_DEFAULT (0) requests synchronous speech.
+    // The SPEI_END_INPUT_STREAM flag (unused here) would be for async mode.
+    let _ = SPEI_END_INPUT_STREAM; // suppress unused import warning
+    unsafe {
+        voice
+            .Speak(wide.as_ptr(), 0, None)
+            .map_err(|e| anyhow::anyhow!("ISpVoice::Speak failed: {:?}", e))?
+    };
+
     Ok(())
 }
 

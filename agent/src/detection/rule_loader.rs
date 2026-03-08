@@ -118,9 +118,9 @@ struct PackManifest {
 
 /// A file with multiple [[rules]] entries
 #[derive(Debug, Deserialize)]
-struct RuleFile {
+pub struct RuleFile {
     #[serde(default)]
-    rules: Vec<DetectionRule>,
+    pub rules: Vec<DetectionRule>,
 }
 
 // ─── Compiled rule ────────────────────────────────────────────────────────────

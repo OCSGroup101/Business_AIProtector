@@ -10,6 +10,10 @@ use crate::config::AgentConfig;
 use crate::core::event_bus::EventPublisher;
 
 pub mod auth;
+#[cfg(all(target_os = "linux", feature = "linux-ebpf"))]
+pub mod ebpf;
+#[cfg(target_os = "macos")]
+pub mod esf;
 pub mod filesystem;
 pub mod integrity;
 pub mod network;

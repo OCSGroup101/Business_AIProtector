@@ -217,12 +217,65 @@ impl DetectionEngine {
 
     fn evaluate_heuristic_rule(
         &self,
-        _compiled: &CompiledRule,
-        _event: &TelemetryEvent,
+        compiled: &CompiledRule,
+        event: &TelemetryEvent,
     ) -> Result<bool> {
-        // Full Lua heuristic evaluation planned for Phase 2 milestone 2.
-        // Will call compiled.lua_fn with (event, context{recent_events}).
-        Ok(false)
+        use mlua::{Function, LuaSerdeExt};
+
+        let lua_key = match compiled.lua_fn.as_ref() {
+            Some(k) => k,
+            None => return Ok(false),
+        };
+
+        // Build a shared Lua state per RuleLoader (stored in compiled.lua_fn registry).
+        // Each evaluation gets a 1 MB memory limit to enforce the performance budget.
+        let lua = mlua::Lua::new();
+        lua.set_memory_limit(1024 * 1024)?;
+
+        // Re-evaluate the Lua script to get the evaluate function
+        let script = &compiled.rule.match_block.lua_script;
+        if script.is_empty() {
+            return Ok(false);
+        }
+
+        let func: Function = lua
+            .load(script)
+            .eval()
+            .map_err(|e| anyhow::anyhow!("Lua eval error in rule {}: {}", compiled.rule.id, e))?;
+
+        // Serialize the event as a Lua table
+        let event_val = lua
+            .to_value(event)
+            .map_err(|e| anyhow::anyhow!("Lua serialize event error: {}", e))?;
+
+        // Build context table with the last 100 events in the sliding window
+        let context_table = lua.create_table()?;
+        let recent_events_table = lua.create_table()?;
+        let window_size = self.event_window.len().min(100);
+        let start = self.event_window.len().saturating_sub(window_size);
+        for (i, ev) in self.event_window.range(start..).enumerate() {
+            let ev_val = lua
+                .to_value(ev)
+                .unwrap_or(mlua::Value::Nil);
+            recent_events_table.set(i + 1, ev_val)?;
+        }
+        context_table.set("recent_events", recent_events_table)?;
+
+        // Call evaluate(event, context) → (bool, table)
+        let result: mlua::MultiValue = func
+            .call((event_val, context_table))
+            .map_err(|e| anyhow::anyhow!("Lua call error in rule {}: {}", compiled.rule.id, e))?;
+
+        let hit = result
+            .into_iter()
+            .next()
+            .and_then(|v| match v {
+                mlua::Value::Boolean(b) => Some(b),
+                _ => None,
+            })
+            .unwrap_or(false);
+
+        Ok(hit)
     }
 
     async fn dispatch_containment(&self, event: &TelemetryEvent, hit: &DetectionHit) {

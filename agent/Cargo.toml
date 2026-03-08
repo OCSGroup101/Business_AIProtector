@@ -1,5 +1,5 @@
 [workspace]
-members = ["."]
+members = [".", "../rdk"]
 resolver = "2"
 
 [package]
@@ -23,13 +23,15 @@ path = "src/main.rs"
 [features]
 default = []
 # Enable whisper.cpp speech-to-text (opt-in, 39MB download)
-stt = ["dep:whisper-rs"]
+stt = ["dep:whisper-rs", "dep:cpal"]
 # Enable Windows-specific ETW/WFP APIs
 windows-etw = []
 # Enable macOS Endpoint Security Framework
 macos-esf = []
 # Enable Linux eBPF collectors
-linux-ebpf = ["dep:aya", "dep:aya-log"]
+linux-ebpf = ["dep:aya", "dep:aya-log", "dep:bytes"]
+# Enable Kafka telemetry streaming
+kafka = ["dep:rdkafka"]
 
 [dependencies]
 # ─── Async runtime ────────────────────────────────────────────────────────────
@@ -89,12 +91,17 @@ notify = { version = "6.1", features = ["serde"] }
 # ─── Certificate / CSR generation (enrollment) ───────────────────────────────
 rcgen = "0.12"
 
+# ─── XML parsing (Windows Security Event Log rendering) ──────────────────────
+quick-xml = "0.36"
+
 # ─── Platform-specific ────────────────────────────────────────────────────────
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.57", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_System_Diagnostics_Etw",
+    "Win32_System_EventLog",
+    "Win32_System_Registry",
     "Win32_System_Threading",
     "Win32_System_Time",
     "Win32_Storage_FileSystem",
@@ -104,12 +111,20 @@ windows = { version = "0.57", features = [
     "Win32_Media_Speech",
 ] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "2.10"
+
 [target.'cfg(target_os = "linux")'.dependencies]
 aya = { version = "0.12", optional = true }
 aya-log = { version = "0.2", optional = true }
+# bytes is a transitive dep of aya; declare it explicitly so ebpf/mod.rs can use BytesMut
+bytes = { version = "1", optional = true }
 
 # ─── Optional (feature-gated) ─────────────────────────────────────────────────
 whisper-rs = { version = "0.11", optional = true }
+# cpal: OS audio capture used by the STT subsystem (--features stt)
+cpal = { version = "0.15", optional = true }
+rdkafka = { version = "0.36", features = ["cmake-build", "ssl"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

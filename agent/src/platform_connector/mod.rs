@@ -2,8 +2,11 @@ pub mod alert_uploader;
 pub mod cert_renewal;
 pub mod client;
 pub mod enrollment;
+#[cfg(feature = "macos-esf")]
+pub mod esf_shim;
 pub mod heartbeat;
 pub mod intel_receiver;
+pub mod kafka_producer;
 pub mod policy_sync;
 pub mod telemetry_uploader;
 pub mod updater;

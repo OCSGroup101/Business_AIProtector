@@ -223,6 +223,23 @@ jobs:
           file: platform/coverage.xml
           flags: platform
 
+  test-rdk:
+    name: "Stage 3 — Unit Tests (RDK)"
+    runs-on: ubuntu-latest
+    needs: [quality-rust, sast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+
+      - name: cargo test (RDK)
+        run: cargo test --manifest-path rdk/Cargo.toml
+
   test-console:
     name: "Stage 3 — Unit Tests (Console)"
     runs-on: ubuntu-latest
@@ -243,11 +260,115 @@ jobs:
         run: npm test -- --coverage --passWithNoTests
         working-directory: platform/console
 
+  test-sdk:
+    name: "Stage 3 — Unit Tests (Integration SDK)"
+    runs-on: ubuntu-latest
+    needs: [quality-python, sast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install SDK + test deps
+        run: |
+          pip install -e ".[dev]"
+        working-directory: sdk/integration-sdk
+
+      - name: pytest SDK
+        run: pytest tests/ -v --tb=short
+        working-directory: sdk/integration-sdk
+
+  lint-helm:
+    name: "Stage 3 — Helm Chart Lint"
+    runs-on: ubuntu-latest
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.x"
+
+      - name: Helm lint
+        run: helm lint helm/openclaw/
+
+      - name: Helm template (dry-run)
+        run: |
+          helm template openclaw helm/openclaw/ \
+            --set ingress.hosts[0].host=openclaw.example.com \
+            --debug > /dev/null
+
+# ─── Stage 3b: macOS Agent Build (Universal Binary) ──────────────────────────
+  build-agent-macos:
+    name: "Stage 3 — macOS Agent (${{ matrix.target }})"
+    runs-on: macos-14
+    needs: [quality-rust, sast]
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+          prefix-key: "v1-macos-${{ matrix.target }}"
+
+      - name: Build agent (${{ matrix.target }})
+        run: cargo build --manifest-path agent/Cargo.toml --release --target ${{ matrix.target }}
+
+      - name: Upload macOS agent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-agent-macos-${{ matrix.target }}-${{ github.sha }}
+          path: agent/target/${{ matrix.target }}/release/openclaw-agent
+          retention-days: 7
+
+  build-agent-macos-universal:
+    name: "Stage 3 — macOS Universal Binary (lipo)"
+    runs-on: macos-14
+    needs: build-agent-macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x86_64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: openclaw-agent-macos-x86_64-apple-darwin-${{ github.sha }}
+          path: dist/x86_64
+
+      - name: Download aarch64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: openclaw-agent-macos-aarch64-apple-darwin-${{ github.sha }}
+          path: dist/aarch64
+
+      - name: Create universal binary
+        run: |
+          lipo -create \
+            dist/x86_64/openclaw-agent \
+            dist/aarch64/openclaw-agent \
+            -output dist/openclaw-agent-universal
+          lipo -info dist/openclaw-agent-universal
+
+      - name: Upload universal binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-agent-macos-universal-${{ github.sha }}
+          path: dist/openclaw-agent-universal
+          retention-days: 30
+
 # ─── Stage 4: Container Build + SBOM ─────────────────────────────────────────
   build:
     name: "Stage 4 — Container Build + SBOM"
     runs-on: ubuntu-latest
-    needs: [test-agent, test-platform, test-console]
+    needs: [test-agent, test-rdk, test-platform, test-console, test-sdk, lint-helm]
     steps:
       - uses: actions/checkout@v4
 
