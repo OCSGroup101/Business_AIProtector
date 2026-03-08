@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "openclaw-sdk"
+version = "0.1.0"
+description = "OpenClaw Integration SDK — SIEM/SOAR connector helpers and platform API client"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Omni Cyber Solutions LLC", email = "dev@omnicybersolutions.com" }]
+requires-python = ">=3.11"
+keywords = ["endpoint-security", "edr", "openclaw", "siem", "soar"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+splunk = ["aiohttp>=3.9"]
+kafka = ["aiokafka>=0.11"]
+dev = ["pytest", "pytest-asyncio", "respx"]
+
+[project.urls]
+Homepage = "https://github.com/OCSGroup101/Business_AIProtector"
+Documentation = "https://github.com/OCSGroup101/Business_AIProtector/tree/main/sdk/integration-sdk"
+Repository = "https://github.com/OCSGroup101/Business_AIProtector"

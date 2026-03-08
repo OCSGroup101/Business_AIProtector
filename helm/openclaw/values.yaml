@@ -1,0 +1,182 @@
+# OpenClaw Helm Chart — Default Values
+# Override with: helm install openclaw ./helm/openclaw -f custom-values.yaml
+
+# ── Global ────────────────────────────────────────────────────────────────────
+global:
+  imageRegistry: ghcr.io/ocsgroup101
+  imagePullSecrets: []
+  storageClass: ""
+
+# ── Platform API ──────────────────────────────────────────────────────────────
+platformApi:
+  enabled: true
+  image:
+    repository: ghcr.io/ocsgroup101/business_aiprotector/platform-api
+    tag: "1.0.0-beta"
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  service:
+    type: ClusterIP
+    port: 8888
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  env:
+    OPENCLAW_DEV_MODE: "false"
+    LOG_LEVEL: info
+  envFromSecrets:
+    - openclaw-secrets
+  # Auto-scaling
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# ── Console (Next.js) ─────────────────────────────────────────────────────────
+console:
+  enabled: true
+  image:
+    repository: ghcr.io/ocsgroup101/business_aiprotector/console
+    tag: "1.0.0-beta"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: openclaw.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: platform-api
+        - path: /
+          pathType: Prefix
+          service: console
+  tls:
+    - secretName: openclaw-tls
+      hosts:
+        - openclaw.example.com
+
+# ── PostgreSQL ────────────────────────────────────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    username: openclaw
+    database: openclaw
+    existingSecret: openclaw-pg-secret
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+  primary:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    persistence:
+      enabled: true
+      size: 20Gi
+  # External PostgreSQL (set postgresql.enabled=false to use external)
+  external:
+    host: ""
+    port: 5432
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    existingSecret: openclaw-redis-secret
+    existingSecretPasswordKey: redis-password
+  master:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# ── Kafka ─────────────────────────────────────────────────────────────────────
+kafka:
+  enabled: true
+  listeners:
+    client:
+      protocol: PLAINTEXT
+  controller:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# ── Keycloak ──────────────────────────────────────────────────────────────────
+keycloak:
+  # Deploy Keycloak separately — this chart does NOT include Keycloak
+  # Set externalUrl to your Keycloak instance URL
+  externalUrl: ""
+
+# ── MinIO ─────────────────────────────────────────────────────────────────────
+minio:
+  enabled: true
+  mode: standalone
+  auth:
+    existingSecret: openclaw-minio-secret
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# ── Agent Update Server (binary distribution) ─────────────────────────────────
+agentUpdateServer:
+  enabled: false
+  # When enabled, serves signed agent binaries via a static file server
+  # Configure with your MinIO/S3 bucket
+  bucketUrl: ""
+
+# ── ServiceAccount ────────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "openclaw"
+
+# ── PodSecurityContext ────────────────────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ── Node selection ────────────────────────────────────────────────────────────
+nodeSelector: {}
+tolerations: []
+affinity: {}

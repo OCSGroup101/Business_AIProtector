@@ -1,0 +1,30 @@
+apiVersion: v2
+name: openclaw
+description: OpenClaw — Open-source endpoint security platform (Helm chart for RKE2/K3s)
+type: application
+version: 0.1.0
+appVersion: "1.0.0-beta"
+home: https://github.com/OCSGroup101/Business_AIProtector
+sources:
+  - https://github.com/OCSGroup101/Business_AIProtector
+maintainers:
+  - name: Omni Cyber Solutions LLC
+    email: dev@omnicybersolutions.com
+keywords:
+  - endpoint-security
+  - edr
+  - detection
+  - openclaw
+dependencies:
+  - name: postgresql
+    version: "15.5.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "19.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: kafka
+    version: "28.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: kafka.enabled

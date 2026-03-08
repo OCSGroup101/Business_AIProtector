@@ -1,0 +1,652 @@
+# Forgejo Actions CI — sovereign CI mirror of .github/workflows/ci.yml
+#
+# Copyright 2024 Omni Cyber Solutions LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: OpenClaw CI
+
+on:
+  push:
+    branches: ["main", "feat/**", "fix/**", "rule/**", "docs/**"]
+  pull_request:
+    branches: ["main"]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  # Minimum scope for PR validation jobs (Stages 0–6, 9).
+  # Stage 7 (sign-containers) and Stage 8 (attest-sbom) override to add
+  # id-token: write and packages: write via per-job permissions blocks.
+  # Keeping these out of the global scope prevents fork PRs from acquiring
+  # container registry or OIDC token permissions.
+  contents: read
+  security-events: write
+
+env:
+  RUST_VERSION: "stable"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+# ─── Stage 0: Secret Scan ─────────────────────────────────────────────────────
+jobs:
+  secret-scan:
+    name: "Stage 0 — Secret Scan (Gitleaks)"
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history for accurate scanning
+
+      - name: Install Gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+
+      - name: Run Gitleaks
+        run: gitleaks detect --source . --log-opts="--all" --verbose --redact
+        # No allow bypass — any detected secret blocks the pipeline
+
+# ─── Stage 1: Code Quality ────────────────────────────────────────────────────
+  quality-rust:
+    name: "Stage 1 — Code Quality (Rust)"
+    runs-on: docker
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+
+      - name: cargo fmt
+        run: cargo fmt --manifest-path agent/Cargo.toml --check
+
+      - name: cargo clippy
+        run: cargo clippy --manifest-path agent/Cargo.toml -- -D warnings
+
+  quality-python:
+    name: "Stage 1 — Code Quality (Python)"
+    runs-on: docker
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff and mypy
+        run: pip install ruff mypy
+
+      - name: ruff check
+        run: ruff check platform/api/
+
+      - name: ruff format check
+        run: ruff format --check platform/api/
+
+      - name: mypy
+        run: |
+          pip install -r platform/api/requirements.txt
+          cd platform && mypy api/ --ignore-missing-imports --explicit-package-bases
+
+  quality-typescript:
+    name: "Stage 1 — Code Quality (TypeScript)"
+    runs-on: docker
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: platform/console/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: platform/console
+
+      - name: ESLint
+        run: npm run lint
+        working-directory: platform/console
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+        working-directory: platform/console
+
+# ─── Stage 2: SAST ────────────────────────────────────────────────────────────
+  sast:
+    name: "Stage 2 — SAST"
+    runs-on: docker
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install SAST tools
+        run: pip install bandit semgrep
+
+      - name: Bandit (Python)
+        run: bandit -r platform/api/ -ll -x platform/api/tests/ --format json -o bandit-report.json
+        continue-on-error: false
+
+      - name: Semgrep (Python + TypeScript)
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: semgrep --config=p/python --config=p/typescript --config=p/owasp-top-ten platform/ --json -o semgrep-report.json
+        continue-on-error: false
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: cargo-audit (Rust)
+        run: cargo audit --file agent/Cargo.lock
+
+      - name: Upload SAST reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-reports
+          path: |
+            bandit-report.json
+            semgrep-report.json
+
+# ─── Stage 3: Unit Tests ─────────────────────────────────────────────────────
+  test-agent:
+    name: "Stage 3 — Unit Tests (Agent)"
+    runs-on: docker
+    needs: [quality-rust, sast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+
+      - name: cargo test
+        run: cargo test --manifest-path agent/Cargo.toml --all-features
+
+      - name: cargo bench (performance gates)
+        run: cargo bench --manifest-path agent/Cargo.toml --no-run
+        # Full benchmarks run on dedicated bench runner in Phase 1
+
+  test-platform:
+    name: "Stage 3 — Unit Tests (Platform)"
+    runs-on: docker
+    needs: [quality-python, sast]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openclaw
+          POSTGRES_PASSWORD: openclaw_test
+          POSTGRES_DB: openclaw_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install -r platform/api/requirements-dev.txt
+
+      - name: Run pytest with coverage
+        env:
+          DATABASE_URL: postgresql+asyncpg://openclaw:openclaw_test@localhost:5432/openclaw_test
+        working-directory: platform
+        run: |
+          pytest api/tests/ \
+            --ignore=api/tests/isolation \
+            --ignore=api/tests/test_enrollment.py \
+            --cov=api \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=5 \
+            -v \
+            --tb=short
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: platform/coverage.xml
+          flags: platform
+
+  test-rdk:
+    name: "Stage 3 — Unit Tests (RDK)"
+    runs-on: docker
+    needs: [quality-rust, sast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+
+      - name: cargo test (RDK)
+        run: cargo test --manifest-path rdk/Cargo.toml
+
+  test-console:
+    name: "Stage 3 — Unit Tests (Console)"
+    runs-on: docker
+    needs: [quality-typescript, sast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: platform/console/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: platform/console
+
+      - name: Jest
+        run: npm test -- --coverage --passWithNoTests
+        working-directory: platform/console
+
+  test-sdk:
+    name: "Stage 3 — Unit Tests (Integration SDK)"
+    runs-on: docker
+    needs: [quality-python, sast]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install SDK + test deps
+        run: |
+          pip install -e ".[dev]"
+        working-directory: sdk/integration-sdk
+
+      - name: pytest SDK
+        run: pytest tests/ -v --tb=short
+        working-directory: sdk/integration-sdk
+
+  lint-helm:
+    name: "Stage 3 — Helm Chart Lint"
+    runs-on: docker
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.x"
+
+      - name: Helm lint
+        run: helm lint helm/openclaw/
+
+      - name: Helm template (dry-run)
+        run: |
+          helm template openclaw helm/openclaw/ \
+            --set ingress.hosts[0].host=openclaw.example.com \
+            --debug > /dev/null
+
+# ─── Stage 3b: macOS Agent Build (Universal Binary) ──────────────────────────
+# NOTE: macOS builds require a self-hosted Forgejo runner registered with the
+# `macos` label and the appropriate Xcode toolchain installed. If no macOS
+# runner is available, these jobs will queue indefinitely. Register a macOS
+# runner or comment out this section until one is provisioned.
+  build-agent-macos:
+    name: "Stage 3 — macOS Agent (${{ matrix.target }})"
+    runs-on: macos
+    needs: [quality-rust, sast]
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+          prefix-key: "v1-macos-${{ matrix.target }}"
+
+      - name: Build agent (${{ matrix.target }})
+        run: cargo build --manifest-path agent/Cargo.toml --release --target ${{ matrix.target }}
+
+      - name: Upload macOS agent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-agent-macos-${{ matrix.target }}-${{ github.sha }}
+          path: agent/target/${{ matrix.target }}/release/openclaw-agent
+          retention-days: 7
+
+  build-agent-macos-universal:
+    name: "Stage 3 — macOS Universal Binary (lipo)"
+    runs-on: macos
+    needs: build-agent-macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x86_64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: openclaw-agent-macos-x86_64-apple-darwin-${{ github.sha }}
+          path: dist/x86_64
+
+      - name: Download aarch64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: openclaw-agent-macos-aarch64-apple-darwin-${{ github.sha }}
+          path: dist/aarch64
+
+      - name: Create universal binary
+        run: |
+          lipo -create \
+            dist/x86_64/openclaw-agent \
+            dist/aarch64/openclaw-agent \
+            -output dist/openclaw-agent-universal
+          lipo -info dist/openclaw-agent-universal
+
+      - name: Upload universal binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-agent-macos-universal-${{ github.sha }}
+          path: dist/openclaw-agent-universal
+          retention-days: 30
+
+# ─── Stage 4: Container Build + SBOM ─────────────────────────────────────────
+  build:
+    name: "Stage 4 — Container Build + SBOM"
+    runs-on: docker
+    needs: [test-agent, test-rdk, test-platform, test-console, test-sdk, lint-helm]
+    steps:
+      - uses: actions/checkout@v4
+
+      # ─── Rust cross-compilation (4 targets) ─────────────────────────────
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: >
+            x86_64-pc-windows-gnu
+            x86_64-unknown-linux-gnu
+            aarch64-unknown-linux-gnu
+
+      - name: Install cross-compilation tools
+        run: |
+          apt-get update -q
+          apt-get install -y gcc-mingw-w64-x86-64 gcc-aarch64-linux-gnu
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent -> target"
+          # Separate cache key from Stage 3 (test) to prevent x86_64 artifacts
+          # cached by Stage 3 from contaminating aarch64 cross-compile objects.
+          prefix-key: "v1-cross"
+
+      - name: Build agent (Linux x86_64)
+        run: cargo build --manifest-path agent/Cargo.toml --release --target x86_64-unknown-linux-gnu
+
+      - name: Build agent (Linux aarch64)
+        # Disable thin LTO for cross-compile: Rust's thin LTO final-codegen
+        # pass runs on the HOST toolchain regardless of --target, producing
+        # x86_64 ELF objects even when targeting aarch64. The correct linker
+        # (aarch64-linux-gnu-gcc) is set in agent/.cargo/config.toml.
+        env:
+          CARGO_PROFILE_RELEASE_LTO: "false"
+        run: cargo build --manifest-path agent/Cargo.toml --release --target aarch64-unknown-linux-gnu
+
+      - name: Build agent (Windows x86_64)
+        env:
+          CARGO_PROFILE_RELEASE_LTO: "false"
+        run: cargo build --manifest-path agent/Cargo.toml --release --target x86_64-pc-windows-gnu
+
+      # ─── Generate SBOMs ──────────────────────────────────────────────────
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Generate SBOM (agent Linux x86_64)
+        run: |
+          syft agent/target/x86_64-unknown-linux-gnu/release/openclaw-agent \
+            -o spdx-json=sbom-agent-linux-x86_64.spdx.json
+
+      # ─── Sign agent binaries ─────────────────────────────────────────────
+      - name: Sign agent binaries (minisign)
+        if: github.ref == 'refs/heads/main'
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+        run: |
+          wget -q https://github.com/jedisct1/minisign/releases/download/0.11/minisign-0.11-linux.tar.gz
+          tar -xzf minisign-0.11-linux.tar.gz
+          for binary in \
+            agent/target/x86_64-unknown-linux-gnu/release/openclaw-agent \
+            agent/target/aarch64-unknown-linux-gnu/release/openclaw-agent \
+            agent/target/x86_64-pc-windows-gnu/release/openclaw-agent.exe; do
+            [ -f "$binary" ] && ./minisign -S -s <(echo "$MINISIGN_SECRET_KEY") -m "$binary"
+          done
+
+      # ─── Container builds ────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build platform API container
+        uses: docker/build-push-action@v6
+        with:
+          context: platform/api
+          file: platform/api/Dockerfile.dev
+          push: false
+          tags: openclaw/platform-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ─── Trivy vulnerability scan ─────────────────────────────────────────
+      - name: Install trivy
+        run: |
+          apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/trivy.list
+          apt-get update && apt-get install -y trivy
+
+      - name: Trivy SBOM scan (CRITICAL fail)
+        run: |
+          trivy sbom sbom-agent-linux-x86_64.spdx.json \
+            --severity CRITICAL \
+            --exit-code 1 \
+            --format table
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-binaries-${{ github.sha }}
+          path: |
+            agent/target/x86_64-unknown-linux-gnu/release/openclaw-agent
+            agent/target/aarch64-unknown-linux-gnu/release/openclaw-agent
+            agent/target/x86_64-pc-windows-gnu/release/openclaw-agent.exe
+            sbom-agent-linux-x86_64.spdx.json
+          retention-days: 30
+
+# ─── Stage 5: IaC Scan ───────────────────────────────────────────────────────
+  iac-scan:
+    name: "Stage 5 — IaC Scan (Trivy)"
+    runs-on: docker
+    needs: secret-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install trivy
+        run: |
+          apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/trivy.list
+          apt-get update && apt-get install -y trivy
+
+      - name: Trivy config scan (docker-compose)
+        run: trivy config docker-compose.yml --severity CRITICAL --exit-code 1
+
+# ─── Stage 6: Isolation Tests ─────────────────────────────────────────────────
+  isolation-tests:
+    name: "Stage 6 — Multi-Tenant Isolation Tests"
+    runs-on: docker
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Start dev stack
+        run: |
+          cp .env.example .env
+          docker compose up -d postgres redis kafka keycloak minio
+          docker compose up -d platform-api
+          # Wait for platform API to be ready
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8888/health/ready && break
+            sleep 5
+          done
+          # Capture platform-api logs to diagnose startup failures
+          docker compose logs platform-api || true
+
+      - name: Install test dependencies
+        run: pip install -r platform/api/requirements-dev.txt
+
+      - name: Run isolation tests
+        run: |
+          pytest platform/api/tests/isolation/ \
+            -v \
+            --tb=short \
+            -x
+        env:
+          PLATFORM_URL: http://localhost:8888
+
+      - name: Tear down dev stack
+        if: always()
+        run: docker compose down -v
+
+# ─── Stage 7: Container Signing [main only] ───────────────────────────────────
+# NOTE: Forgejo does not currently support Sigstore keyless OIDC signing.
+# This stage uses a Forgejo secret (COSIGN_KEY) for key-based signing.
+# To migrate to keyless signing, a Sigstore-compatible OIDC provider must be
+# configured on the self-hosted Forgejo instance.
+  sign-containers:
+    name: "Stage 7 — Container Signing (Cosign)"
+    runs-on: docker
+    needs: [build, isolation-tests]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Log in to Forgejo Container Registry
+        uses: docker/login-action@v3
+        with:
+          # Update FORGEJO_REGISTRY_URL secret to point at your self-hosted
+          # Forgejo instance container registry (e.g. forgejo.example.com).
+          registry: ${{ secrets.FORGEJO_REGISTRY_URL }}
+          username: ${{ secrets.FORGEJO_REGISTRY_USER }}
+          password: ${{ secrets.FORGEJO_REGISTRY_TOKEN }}
+
+      - name: Build and push container
+        uses: docker/build-push-action@v6
+        id: build-push
+        with:
+          context: platform/api
+          push: true
+          tags: ${{ secrets.FORGEJO_REGISTRY_URL }}/${{ github.repository }}/platform-api:${{ github.sha }}
+
+      - name: Cosign sign (key-based)
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "$COSIGN_KEY" > cosign.key
+          cosign sign --yes --key cosign.key \
+            ${{ secrets.FORGEJO_REGISTRY_URL }}/${{ github.repository }}/platform-api@${{ steps.build-push.outputs.digest }}
+          rm -f cosign.key
+
+# ─── Stage 8: SBOM Attestation [main only] ────────────────────────────────────
+  attest-sbom:
+    name: "Stage 8 — SBOM Attestation (Cosign)"
+    runs-on: docker
+    needs: sign-containers
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Cosign + syft
+        uses: sigstore/cosign-installer@v3
+
+      - uses: anchore/sbom-action/download-syft@v0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: openclaw-binaries-${{ github.sha }}
+
+      - name: Cosign attest SBOM (key-based)
+        env:
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "$COSIGN_KEY" > cosign.key
+          cosign attest --yes --key cosign.key \
+            --predicate sbom-agent-linux-x86_64.spdx.json \
+            --type spdxjson \
+            ${{ secrets.FORGEJO_REGISTRY_URL }}/${{ github.repository }}/platform-api:${{ github.sha }}
+          rm -f cosign.key
+
+# ─── Stage 9: DAST [staging only] ────────────────────────────────────────────
+  dast:
+    name: "Stage 9 — DAST (OWASP ZAP)"
+    runs-on: docker
+    needs: isolation-tests
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ZAP Authenticated Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: ${{ secrets.STAGING_API_URL }}
+          rules_file_name: ".zap/rules.tsv"
+          cmd_options: "-a"
+        env:
+          ZAP_AUTH_HEADER_VALUE: ${{ secrets.STAGING_API_TOKEN }}

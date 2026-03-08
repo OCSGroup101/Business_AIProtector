@@ -1,0 +1,41 @@
+{{/* Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0. */}}
+{{- if .Values.platformApi.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openclaw.fullname" . }}-api
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+    app.kubernetes.io/component: platform-api
+spec:
+  type: {{ .Values.platformApi.service.type }}
+  ports:
+    - port: {{ .Values.platformApi.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "openclaw.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: platform-api
+{{- end }}
+{{- if .Values.console.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openclaw.fullname" . }}-console
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+    app.kubernetes.io/component: console
+spec:
+  type: {{ .Values.console.service.type }}
+  ports:
+    - port: {{ .Values.console.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "openclaw.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: console
+{{- end }}
