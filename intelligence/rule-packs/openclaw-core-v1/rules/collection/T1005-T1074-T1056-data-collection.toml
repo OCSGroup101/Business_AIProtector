@@ -1,0 +1,181 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+# TA0009 — Collection
+# Detects adversary techniques for gathering data of interest prior to exfiltration.
+
+[[rules]]
+id = "OC-BEH-0090"
+name = "Sensitive File Access from Suspicious Process"
+enabled = true
+description = """
+Detects non-system processes reading high-value credential and configuration files.
+Targets SAM, NTDS.dit, shadow copies, SSH keys, browser credential stores, and
+cloud provider config files — commonly accessed during collection phases.
+"""
+
+[rules.mitre]
+tactics    = ["TA0009"]
+techniques = ["T1005", "T1552.001"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["file.read"]
+
+[[rules.match.conditions]]
+field    = "payload.file_path"
+operator = "contains"
+values   = [
+  "\\Windows\\System32\\config\\SAM",
+  "\\Windows\\NTDS\\ntds.dit",
+  "\\System Volume Information\\",
+  "\\.ssh\\id_rsa",
+  "\\.ssh\\id_ed25519",
+  "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data",
+  "\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles",
+  "\\.aws\\credentials",
+  "\\.azure\\credentials",
+  "\\.config\\gcloud\\credentials",
+]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "not_in"
+values   = [
+  "System",
+  "lsass.exe",
+  "services.exe",
+  "svchost.exe",
+  "MsMpEng.exe",
+]
+
+[rules.response]
+severity     = "HIGH"
+auto_contain = []
+notify       = true
+tts          = true
+
+
+[[rules]]
+id = "OC-BEH-0091"
+name = "Data Staged in Temp or Public Directory"
+enabled = true
+description = """
+Detects processes writing archive files (zip, rar, 7z, tar) to world-writable
+staging directories. Adversaries commonly compress and stage data in temp folders
+immediately before exfiltration.
+"""
+
+[rules.mitre]
+tactics    = ["TA0009"]
+techniques = ["T1074.001"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["file.create", "file.write"]
+
+[[rules.match.conditions]]
+field    = "payload.file_path"
+operator = "contains"
+values   = [
+  "\\Temp\\",
+  "\\tmp\\",
+  "\\Public\\",
+  "\\ProgramData\\",
+  "/tmp/",
+  "/var/tmp/",
+]
+
+[[rules.match.conditions]]
+field    = "payload.file_extension"
+operator = "in"
+values   = [".zip", ".rar", ".7z", ".tar", ".gz", ".tar.gz", ".tgz", ".cab"]
+
+[rules.response]
+severity     = "MEDIUM"
+auto_contain = []
+notify       = true
+
+
+[[rules]]
+id = "OC-BEH-0092"
+name = "Keylogger Process Detected"
+enabled = true
+description = """
+Detects known keylogging and input-capture tool names. Keyloggers harvest
+credentials, PII, and sensitive communications and are a primary collection
+technique in targeted attacks.
+"""
+
+[rules.mitre]
+tactics    = ["TA0009"]
+techniques = ["T1056.001"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "pykeylogger.exe",
+  "spyrix.exe",
+  "revealer-keylogger.exe",
+  "actual-keylogger.exe",
+  "hook.exe",
+  "keylog.exe",
+  "klog.exe",
+  "logkeys",
+]
+
+[rules.response]
+severity     = "CRITICAL"
+auto_contain = ["terminate_process"]
+notify       = true
+tts          = true
+
+
+[[rules]]
+id = "OC-BEH-0093"
+name = "Screen Capture Tool Execution"
+enabled = true
+description = """
+Detects execution of screen-capture utilities outside of known remote-support
+or RMM tool contexts. Screen capture is used to harvest displayed credentials,
+business data, and to establish situational awareness for targeted attacks.
+"""
+
+[rules.mitre]
+tactics    = ["TA0009"]
+techniques = ["T1113"]
+
+[rules.match]
+type        = "behavioral"
+event_types = ["process.create"]
+
+[[rules.match.conditions]]
+field    = "payload.process_name"
+operator = "in"
+values   = [
+  "nircmd.exe",
+  "screencapture",
+  "scrot",
+  "import",        # ImageMagick import
+  "flameshot",
+  "screenshot.exe",
+]
+
+[[rules.match.conditions]]
+field    = "payload.cmdline"
+operator = "contains"
+values   = [
+  "savescreenshot",
+  "screenshot",
+  "BitBlt",
+  "PrintWindow",
+  "CopyFromScreen",
+]
+
+[rules.response]
+severity     = "MEDIUM"
+auto_contain = []
+notify       = true

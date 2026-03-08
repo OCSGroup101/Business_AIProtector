@@ -1,7 +1,7 @@
 # T1547.001 — Boot or Logon Autostart: Registry Run Keys / Startup Folder
 
 [[rules]]
-id = "OC-BEH-0010"
+id = "OC-BEH-0013"
 name = "Registry Run Key Modification"
 enabled = true
 description = """
@@ -34,7 +34,7 @@ notify = true
 
 
 [[rules]]
-id = "OC-BEH-0011"
+id = "OC-BEH-0014"
 name = "Scheduled Task Created by Non-Admin Process"
 enabled = true
 description = """

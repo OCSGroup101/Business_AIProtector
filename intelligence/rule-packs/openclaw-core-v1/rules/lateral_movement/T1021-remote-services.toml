@@ -2,7 +2,7 @@
 # T1021 — Remote Services: lateral movement via remote execution tools
 
 [[rules]]
-id = "OC-BEH-0030"
+id = "OC-BEH-0033"
 name = "PsExec-Style Remote Execution Tool"
 enabled = true
 
@@ -32,7 +32,7 @@ notify       = true
 
 
 [[rules]]
-id = "OC-BEH-0031"
+id = "OC-BEH-0034"
 name = "WMI Remote Process Execution"
 enabled = true
 
@@ -61,7 +61,7 @@ notify       = true
 
 
 [[rules]]
-id = "OC-BEH-0032"
+id = "OC-BEH-0035"
 name = "Pass-the-Hash Mimikatz sekurlsa"
 enabled = true
 

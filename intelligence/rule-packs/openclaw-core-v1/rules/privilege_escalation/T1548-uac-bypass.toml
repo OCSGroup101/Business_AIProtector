@@ -2,7 +2,7 @@
 # T1548.002 — Abuse Elevation Control Mechanism: Bypass User Account Control
 
 [[rules]]
-id = "OC-BEH-0020"
+id = "OC-BEH-0023"
 name = "UAC Bypass via Known LOLBin Technique"
 enabled = true
 
@@ -34,7 +34,7 @@ notify       = true
 
 
 [[rules]]
-id = "OC-BEH-0021"
+id = "OC-BEH-0024"
 name = "Token Impersonation via SeImpersonatePrivilege"
 enabled = true
 
