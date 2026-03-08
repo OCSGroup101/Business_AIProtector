@@ -9,7 +9,7 @@
 // unavailable or not configured.
 
 use anyhow::Result;
-use tracing::{debug, warn};
+use tracing::warn;
 
 use crate::core::event_bus::TelemetryEvent;
 

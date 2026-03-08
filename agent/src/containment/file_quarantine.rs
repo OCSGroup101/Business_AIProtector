@@ -10,7 +10,7 @@
 // root/SYSTEM so that the quarantined payload cannot be trivially recovered.
 
 use anyhow::Result;
-use ring::aead::{self, Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM, NONCE_LEN};
+use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM, NONCE_LEN};
 use ring::rand::{SecureRandom, SystemRandom};
 use std::path::{Path, PathBuf};
 use tracing::info;
