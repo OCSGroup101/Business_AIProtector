@@ -45,5 +45,5 @@ variable "db_tier" {
 variable "static_ip" {
   description = "Reserved static IP for the ingress load balancer"
   type        = string
-  default     = "35.201.83.36"
+  default     = "34.71.139.127"
 }

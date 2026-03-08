@@ -1,0 +1,110 @@
+# Copyright 2024 Omni Cyber Solutions LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Creates a PR against the public upstream repo (OCSGroup101/Business_AIProtector)
+# from a sanitised branch — stripping any private/internal files before opening.
+#
+# Usage: manually triggered, specify the branch or commit range to contribute.
+
+name: Contribute to Upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: "Branch in this private repo to contribute from"
+        required: true
+      pr_title:
+        description: "PR title for the upstream repo"
+        required: true
+      pr_body:
+        description: "PR description"
+        required: false
+        default: "Contribution from OmniProtect production deployment."
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Files that must NEVER appear in a public upstream PR.
+# Add patterns here as the private repo grows.
+env:
+  PRIVATE_PATHS: |
+    .github/workflows/cd.yml
+    .github/workflows/infra.yml
+    .github/workflows/sync-from-upstream.yml
+    .github/workflows/contribute-to-upstream.yml
+    infra/
+    helm/openclaw/values.prod.yaml
+    platform/console/next.config.prod.mjs
+
+jobs:
+  contribute:
+    name: "Open PR on upstream public repo"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_CONTRIB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "OmniProtect Contributor"
+          git config user.email "opensource@omnicybersolutions.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/OCSGroup101/Business_AIProtector.git
+          git fetch upstream main
+
+      - name: Create sanitised contribution branch
+        run: |
+          CONTRIB_BRANCH="contrib/${{ inputs.source_branch }}-$(date +%Y%m%d%H%M)"
+          git checkout -b $CONTRIB_BRANCH upstream/main
+          git merge --no-ff ${{ inputs.source_branch }} --no-edit || true
+
+          # Strip private files
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            git rm -rf --cached "$path" 2>/dev/null || true
+            rm -rf "$path" 2>/dev/null || true
+          done <<< "${{ env.PRIVATE_PATHS }}"
+
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: remove private files before upstream contribution"
+
+          # Push to upstream under a well-known namespace
+          git push upstream $CONTRIB_BRANCH
+
+          echo "CONTRIB_BRANCH=$CONTRIB_BRANCH" >> $GITHUB_ENV
+
+      - name: Open PR on upstream
+        run: |
+          gh pr create \
+            --repo OCSGroup101/Business_AIProtector \
+            --title "${{ inputs.pr_title }}" \
+            --body "${{ inputs.pr_body }}" \
+            --base main \
+            --head $CONTRIB_BRANCH
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_CONTRIB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Upstream Contribution" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: \`$CONTRIB_BRANCH\`" >> $GITHUB_STEP_SUMMARY
+          echo "- PR opened on: [OCSGroup101/Business_AIProtector](https://github.com/OCSGroup101/Business_AIProtector/pulls)" >> $GITHUB_STEP_SUMMARY

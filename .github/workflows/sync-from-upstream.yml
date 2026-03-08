@@ -1,0 +1,102 @@
+# Copyright 2024 Omni Cyber Solutions LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Pulls changes from the public upstream repo (OCSGroup101/Business_AIProtector)
+# into this private repo on a weekly schedule or on demand.
+#
+# Strategy: rebase our private commits on top of upstream/main so we always
+# benefit from community improvements while keeping our internal changes on top.
+# If there are conflicts, the workflow opens a PR for manual resolution instead
+# of force-pushing.
+
+name: Sync from Upstream
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"   # Every Monday at 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Upstream ref to sync from (branch/tag/SHA)"
+        default: "main"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: "Merge upstream → private main"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name  "OmniProtect Sync Bot"
+          git config user.email "bot@omnicybersolutions.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/OCSGroup101/Business_AIProtector.git
+          git fetch upstream
+
+      - name: Attempt merge
+        id: merge
+        run: |
+          UPSTREAM_REF="${{ inputs.upstream_ref || 'main' }}"
+          git checkout main
+
+          # Try a clean merge
+          if git merge upstream/$UPSTREAM_REF --no-edit -m "chore(sync): merge upstream $UPSTREAM_REF into private main"; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+          else
+            echo "merged=false" >> $GITHUB_OUTPUT
+            git merge --abort || true
+          fi
+
+      - name: Push if clean merge
+        if: steps.merge.outputs.merged == 'true'
+        run: git push origin main
+
+      - name: Open PR on conflict
+        if: steps.merge.outputs.merged == 'false'
+        run: |
+          BRANCH="sync/upstream-$(date +%Y-%m-%d)"
+          git checkout -b $BRANCH
+          git merge upstream/${{ inputs.upstream_ref || 'main' }} --no-edit || true
+          git add -A
+          git commit -m "chore(sync): upstream merge with conflicts — manual resolution required" || true
+          git push origin $BRANCH
+
+          gh pr create \
+            --title "chore(sync): upstream merge conflicts $(date +%Y-%m-%d)" \
+            --body "Automatic upstream sync from \`OCSGroup101/Business_AIProtector\` failed due to conflicts. Please resolve manually." \
+            --base main \
+            --head $BRANCH \
+            --label "sync,needs-review"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          UPSTREAM_SHA=$(git rev-parse upstream/${{ inputs.upstream_ref || 'main' }})
+          echo "## Upstream Sync" >> $GITHUB_STEP_SUMMARY
+          echo "- Upstream SHA: \`$UPSTREAM_SHA\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Result: ${{ steps.merge.outputs.merged == 'true' && 'Clean merge pushed to main' || 'Conflicts — PR opened for manual resolution' }}" >> $GITHUB_STEP_SUMMARY

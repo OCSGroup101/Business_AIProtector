@@ -13,7 +13,7 @@
 # limitations under the License.
 
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.5"
 
   required_providers {
     google = {
@@ -137,6 +137,22 @@ resource "google_container_node_pool" "main" {
   }
 }
 
+# ── Private Services Connection (required for Cloud SQL private IP) ───────────
+
+resource "google_compute_global_address" "private_ip_range" {
+  name          = "omniprotect-private-ip"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 20
+  network       = google_compute_network.main.id
+}
+
+resource "google_service_networking_connection" "private_vpc" {
+  network                 = google_compute_network.main.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_range.name]
+}
+
 # ── Cloud SQL (PostgreSQL 16) ─────────────────────────────────────────────────
 
 resource "google_sql_database_instance" "main" {
@@ -146,6 +162,7 @@ resource "google_sql_database_instance" "main" {
 
   settings {
     tier              = var.db_tier
+    edition           = "ENTERPRISE"
     availability_type = "REGIONAL"   # HA with failover replica
 
     backup_configuration {
@@ -160,7 +177,8 @@ resource "google_sql_database_instance" "main" {
     ip_configuration {
       ipv4_enabled    = false
       private_network = google_compute_network.main.id
-      require_ssl     = true
+      ssl_mode        = "ENCRYPTED_ONLY"
+      enable_private_path_for_google_cloud_services = true
     }
 
     database_flags {
@@ -169,6 +187,7 @@ resource "google_sql_database_instance" "main" {
     }
   }
 
+  depends_on      = [google_service_networking_connection.private_vpc]
   deletion_protection = true
 }
 
@@ -195,7 +214,7 @@ resource "google_redis_instance" "main" {
 # ── Cloud DNS ─────────────────────────────────────────────────────────────────
 
 data "google_dns_managed_zone" "omnicybersolutions" {
-  name = "omnicybersolutions-com"
+  name = "omnicybersolutions"
 }
 
 resource "google_dns_record_set" "omniprotect" {
@@ -207,10 +226,12 @@ resource "google_dns_record_set" "omniprotect" {
 }
 
 # ── Terraform state bucket ───────────────────────────────────────────────────
+# Bucket was created manually before Terraform was initialised.
+# Import with: terraform import google_storage_bucket.tfstate omniprotect-prod-tfstate
 
 resource "google_storage_bucket" "tfstate" {
   name          = "omniprotect-prod-tfstate"
-  location      = var.region
+  location      = "US-CENTRAL1"
   force_destroy = false
 
   versioning {
@@ -218,4 +239,25 @@ resource "google_storage_bucket" "tfstate" {
   }
 
   uniform_bucket_level_access = true
+}
+
+# ── Cloud NAT (outbound internet for private nodes) ───────────────────────────
+
+resource "google_compute_router" "main" {
+  name    = "omniprotect-router"
+  region  = var.region
+  network = google_compute_network.main.id
+}
+
+resource "google_compute_router_nat" "main" {
+  name                               = "omniprotect-nat"
+  router                             = google_compute_router.main.name
+  region                             = var.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+
+  log_config {
+    enable = false
+    filter = "ERRORS_ONLY"
+  }
 }
