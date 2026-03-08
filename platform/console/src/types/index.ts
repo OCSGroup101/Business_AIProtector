@@ -1,6 +1,27 @@
+// Copyright 2024 Omni Cyber Solutions LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// ─── Agent ────────────────────────────────────────────────────────────────────
+
 export type AgentState = "ENROLLING" | "ACTIVE" | "ISOLATED" | "UPDATING";
 export type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
-export type IncidentStatus = "OPEN" | "INVESTIGATING" | "CONTAINED" | "RESOLVED" | "FALSE_POSITIVE";
+export type IncidentStatus =
+  | "OPEN"
+  | "INVESTIGATING"
+  | "CONTAINED"
+  | "RESOLVED"
+  | "FALSE_POSITIVE";
 
 export interface Agent {
   id: string;
@@ -67,8 +88,14 @@ export interface ThreatFeed {
   error_message: string | null;
 }
 
-// Rules
-export type RuleMatchType = "ioc" | "behavioral" | "heuristic" | "sequence" | "threshold";
+// ─── Rules ────────────────────────────────────────────────────────────────────
+
+export type RuleMatchType =
+  | "ioc"
+  | "behavioral"
+  | "heuristic"
+  | "sequence"
+  | "threshold";
 
 export interface RuleFile {
   id: string;
@@ -101,7 +128,8 @@ export interface RuleTestResult {
   errors: string[];
 }
 
-// Reports
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
 export type ReportType = "incident_summary" | "executive_summary";
 export type ReportStatus = "pending" | "generating" | "complete" | "failed";
 
@@ -115,7 +143,8 @@ export interface Report {
   error_message: string | null;
 }
 
-// SIEM Connectors
+// ─── SIEM Connectors ──────────────────────────────────────────────────────────
+
 export type SiemConnectorType = "splunk" | "elasticsearch" | "sentinel";
 
 export interface SiemConnector {
@@ -135,4 +164,62 @@ export interface CreateSiemConnectorRequest {
   type: SiemConnectorType;
   ssl_verify: boolean;
   config: Record<string, string>;
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+}
+
+export interface AuthState {
+  token: string | null;
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isMsp: boolean;
+  login: (msp?: boolean) => void;
+  logout: () => void;
+}
+
+// ─── MSP ──────────────────────────────────────────────────────────────────────
+
+export interface MspSummary {
+  total_tenants: number;
+  total_agents: number;
+  total_open_incidents: number;
+  critical_incidents: number;
+}
+
+export interface TenantSummary {
+  id: string;
+  name: string;
+  agent_count: number;
+  open_incidents: number;
+  critical_incidents: number;
+  last_activity_at: string | null;
+}
+
+export interface TenantDetailSummary extends TenantSummary {
+  recent_incidents: Incident[];
+  agents: Agent[];
+}
+
+export interface ProvisionTenantRequest {
+  name: string;
+  tenant_id?: string;
+}
+
+export interface MspAlert {
+  id: string;
+  tenant_id: string;
+  tenant_name: string;
+  agent_id: string;
+  hostname: string;
+  rule_name: string;
+  severity: Severity;
+  status: IncidentStatus;
+  first_seen_at: string;
 }

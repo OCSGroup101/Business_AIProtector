@@ -13,7 +13,16 @@
 // limitations under the License.
 
 import axios from "axios";
-import type { CreateRuleRequest, CreateSiemConnectorRequest } from "@/types";
+import type {
+  CreateRuleRequest,
+  CreateSiemConnectorRequest,
+  MspSummary,
+  TenantSummary,
+  TenantDetailSummary,
+  ProvisionTenantRequest,
+  MspAlert,
+  AuditEntry,
+} from "@/types";
 
 export const PLATFORM_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8888";
@@ -26,10 +35,11 @@ export const apiClient = axios.create({
   },
 });
 
-// Attach auth token from Keycloak on each request
+// Auth interceptor: attach Keycloak token (or dev token) on every request
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = sessionStorage.getItem("kc_token");
+    const token =
+      sessionStorage.getItem("kc_token") ?? localStorage.getItem("dev_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,19 +47,19 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Retry on 401 (token refresh)
+// Retry on 401: clear token so next request forces re-auth
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Phase 1: trigger Keycloak token refresh
       sessionStorage.removeItem("kc_token");
     }
     return Promise.reject(error);
   }
 );
 
-// Rules
+// ─── Rules ────────────────────────────────────────────────────────────────────
+
 export const listRules = () =>
   apiClient.get("/api/v1/rules").then((r) => r.data);
 export const getRule = (id: string) =>
@@ -65,7 +75,8 @@ export const validateRule = (toml: string) =>
 export const testRule = (toml: string, events: unknown[]) =>
   apiClient.post("/api/v1/rules/test", { content_toml: toml, events });
 
-// Reports
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
 export const listReports = () =>
   apiClient.get("/api/v1/reports").then((r) => r.data);
 export const generateReport = (type: string, period_days: number) =>
@@ -73,7 +84,8 @@ export const generateReport = (type: string, period_days: number) =>
 export const getReportDownloadUrl = (id: string) =>
   `${PLATFORM_URL}/api/v1/reports/${id}/download`;
 
-// SIEM
+// ─── SIEM ─────────────────────────────────────────────────────────────────────
+
 export const listSiemConnectors = () =>
   apiClient.get("/api/v1/siem/connectors").then((r) => r.data);
 export const createSiemConnector = (data: CreateSiemConnectorRequest) =>
@@ -82,3 +94,36 @@ export const deleteSiemConnector = (id: string) =>
   apiClient.delete(`/api/v1/siem/connectors/${id}`);
 export const testSiemConnector = (id: string) =>
   apiClient.post(`/api/v1/siem/connectors/${id}/test`);
+
+// ─── MSP ──────────────────────────────────────────────────────────────────────
+
+export const getMspSummary = (): Promise<MspSummary> =>
+  apiClient.get("/api/v1/msp/summary").then((r) => r.data);
+
+export const getMspTenants = (): Promise<TenantSummary[]> =>
+  apiClient.get("/api/v1/msp/tenants").then((r) => r.data);
+
+export const getMspTenantSummary = (tenantId: string): Promise<TenantDetailSummary> =>
+  apiClient.get(`/api/v1/msp/tenants/${tenantId}/summary`).then((r) => r.data);
+
+export const provisionTenant = (data: ProvisionTenantRequest): Promise<{ id: string; name: string }> =>
+  apiClient.post("/api/v1/msp/tenants", data).then((r) => r.data);
+
+export const generateEnrollmentToken = (
+  tenantId: string
+): Promise<{ token: string; tenant_id: string }> =>
+  apiClient
+    .post(`/api/v1/msp/tenants/${tenantId}/enrollment-token`)
+    .then((r) => r.data);
+
+export const getMspAlerts = (tenantId?: string): Promise<MspAlert[]> =>
+  apiClient
+    .get("/api/v1/msp/alerts", { params: tenantId ? { tenant_id: tenantId } : {} })
+    .then((r) => r.data);
+
+export const getMspAudit = (params: {
+  tenant_id?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<{ entries: (AuditEntry & { tenant_name?: string })[]; total: number }> =>
+  apiClient.get("/api/v1/msp/audit", { params }).then((r) => r.data);

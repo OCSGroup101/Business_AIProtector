@@ -12,25 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
+"use client";
 
-export const metadata: Metadata = {
-  title: "OmniProtect — Endpoint Security",
-  description: "OmniProtect endpoint security management console",
-};
+import { MspSidebar } from "@/components/msp/MspSidebar";
 
-export default function RootLayout({
+export default function MspLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full bg-slate-950 text-slate-100 antialiased">
-        <Providers>{children}</Providers>
-      </body>
-    </html>
+    <div className="flex h-full">
+      <MspSidebar />
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
   );
 }

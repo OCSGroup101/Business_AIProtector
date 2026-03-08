@@ -1,7 +1,21 @@
+# Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 RBAC middleware and permission helpers.
 
-Roles: tenant_admin | security_admin | helpdesk | auditor
+Roles: tenant_admin | security_admin | helpdesk | auditor | msp_operator
 Permission enforcement via FastAPI dependencies.
 """
 
@@ -17,6 +31,7 @@ class Role(str, Enum):
     SECURITY_ADMIN = "security_admin"
     HELPDESK = "helpdesk"
     AUDITOR = "auditor"
+    MSP_OPERATOR = "msp_operator"
 
 
 class Permission(str, Enum):
@@ -38,6 +53,8 @@ class Permission(str, Enum):
     # Intelligence
     INTEL_READ = "intel:read"
     INTEL_WRITE = "intel:write"
+    # MSP multi-tenant management
+    MANAGE_TENANTS = "manage:tenants"
 
 
 # Permission matrix
@@ -82,6 +99,14 @@ _ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         Permission.AUDIT_READ,
         Permission.INTEL_READ,
     },
+    Role.MSP_OPERATOR: {
+        Permission.AGENTS_READ,
+        Permission.POLICIES_READ,
+        Permission.INCIDENTS_READ,
+        Permission.AUDIT_READ,
+        Permission.INTEL_READ,
+        Permission.MANAGE_TENANTS,
+    },
 }
 
 
@@ -92,6 +117,7 @@ _DEV_TOKEN_ROLES: dict[str, Role] = {
     "dev-security-token": Role.SECURITY_ADMIN,
     "dev-helpdesk-token": Role.HELPDESK,
     "dev-auditor-token": Role.AUDITOR,
+    "dev-msp-token": Role.MSP_OPERATOR,
 }
 
 
@@ -146,6 +172,24 @@ def require_permission(permission: Permission) -> Callable:
         return role
 
     return dependency
+
+
+def get_msp_actor(request: Request) -> dict:
+    """
+    FastAPI dependency — requires the caller to hold the MSP_OPERATOR role.
+
+    MSP operators bypass per-tenant scoping; no X-Tenant-ID header is required.
+    Raises HTTP 403 for any other role.
+
+    Returns a minimal actor dict suitable for audit logging.
+    """
+    role = get_current_user_role(request)
+    if role != Role.MSP_OPERATOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="MSP operator role required",
+        )
+    return {"role": "msp_operator", "actor_id": "msp"}
 
 
 def _extract_role_from_jwt(token: str) -> Optional[str]:

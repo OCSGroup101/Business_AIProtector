@@ -12,25 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
+type Size = "sm" | "md" | "lg";
 
-export const metadata: Metadata = {
-  title: "OmniProtect — Endpoint Security",
-  description: "OmniProtect endpoint security management console",
+const SIZE_CLASSES: Record<Size, string> = {
+  sm: "w-3 h-3 border",
+  md: "w-5 h-5 border-2",
+  lg: "w-8 h-8 border-2",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function Spinner({ size = "md" }: { size?: Size }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full bg-slate-950 text-slate-100 antialiased">
-        <Providers>{children}</Providers>
-      </body>
-    </html>
+    <span
+      className={`inline-block rounded-full border-current border-r-transparent animate-spin ${SIZE_CLASSES[size]}`}
+      aria-label="Loading"
+    />
   );
 }

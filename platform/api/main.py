@@ -30,6 +30,7 @@ from .routes import (
     incidents,
     intel,
     intel_feeds,
+    msp,
     policies,
     reports,
     risk,
@@ -121,6 +122,7 @@ app.include_router(rules.router, prefix="/api/v1/rules", tags=["rules"])
 app.include_router(siem.router, prefix="/api/v1/siem", tags=["siem"])
 app.include_router(deployments.router, prefix="/api/v1/deployments", tags=["deployments"])
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
+app.include_router(msp.router, prefix="/api/v1/msp", tags=["msp"])
 app.include_router(correlation.router, prefix="/api/v1/correlation", tags=["ai"])
 app.include_router(hunting.router, prefix="/api/v1/hunting", tags=["ai"])
 app.include_router(risk.router, prefix="/api/v1", tags=["ai"])

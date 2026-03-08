@@ -41,17 +41,17 @@ const CONNECTOR_FIELDS: Record<
     { key: "url", label: "HEC URL", placeholder: "https://splunk.example.com:8088" },
     { key: "hec_token", label: "HEC Token", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", secret: true },
     { key: "index", label: "Index", placeholder: "main" },
-    { key: "source_type", label: "Source Type", placeholder: "openclaw:event" },
+    { key: "source_type", label: "Source Type", placeholder: "omniprotect:event" },
   ],
   elasticsearch: [
     { key: "url", label: "URL", placeholder: "https://es.example.com:9200" },
     { key: "api_key", label: "API Key", placeholder: "base64-encoded-api-key", secret: true },
-    { key: "index_prefix", label: "Index Prefix", placeholder: "openclaw-" },
+    { key: "index_prefix", label: "Index Prefix", placeholder: "omniprotect-" },
   ],
   sentinel: [
     { key: "workspace_id", label: "Workspace ID", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
     { key: "shared_key", label: "Shared Key", placeholder: "base64-encoded-shared-key", secret: true },
-    { key: "log_type", label: "Log Type", placeholder: "OpenClawEvents" },
+    { key: "log_type", label: "Log Type", placeholder: "OmniProtectEvents" },
   ],
 };
 

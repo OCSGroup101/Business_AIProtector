@@ -12,25 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
-
-export const metadata: Metadata = {
-  title: "OmniProtect — Endpoint Security",
-  description: "OmniProtect endpoint security management console",
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" className="h-full">
-      <body className="h-full bg-slate-950 text-slate-100 antialiased">
-        <Providers>{children}</Providers>
-      </body>
-    </html>
-  );
-}
+export { Badge } from "./Badge";
+export { Button } from "./Button";
+export { Card, CardHeader, CardTitle, CardContent, CardFooter } from "./Card";
+export { DataTable } from "./DataTable";
+export type { Column } from "./DataTable";
+export { EmptyState } from "./EmptyState";
+export { ErrorBoundary } from "./ErrorBoundary";
+export { Modal, useModal } from "./Modal";
+export { Skeleton } from "./Skeleton";
+export { Spinner } from "./Spinner";
+export { StatCard } from "./StatCard";

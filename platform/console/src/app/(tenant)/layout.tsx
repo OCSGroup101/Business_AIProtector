@@ -12,25 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers";
+import { NavSidebar } from "@/components/NavSidebar";
 
-export const metadata: Metadata = {
-  title: "OmniProtect — Endpoint Security",
-  description: "OmniProtect endpoint security management console",
-};
-
-export default function RootLayout({
+export default function TenantLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full bg-slate-950 text-slate-100 antialiased">
-        <Providers>{children}</Providers>
-      </body>
-    </html>
+    <div className="flex h-full">
+      <NavSidebar />
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
   );
 }

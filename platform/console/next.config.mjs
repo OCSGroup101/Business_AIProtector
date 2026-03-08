@@ -8,10 +8,11 @@ const nextConfig = {
     NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "openclaw-console",
   },
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8888";
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },
