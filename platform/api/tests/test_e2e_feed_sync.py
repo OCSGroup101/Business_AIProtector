@@ -441,6 +441,50 @@ class TestFeedStatus:
                     f"Unexpected feed status for {name}: {feeds[name]['status']!r}"
                 )
 
+    def test_misp_and_mitre_feeds_registered(self, api):
+        """
+        Phase 2 adds MISP and MITRE ATT&CK feeds (items 2.2).
+        Both must appear in the feed registry with valid status.
+        MISP may be in 'error' if MISP_URL/MISP_KEY are not set (expected in dev).
+        MITRE should be 'active' as it fetches from a public GitHub URL.
+        """
+        r = api.get("/api/v1/intel/feeds")
+        assert r.status_code == 200
+        feeds = {f["name"]: f for f in r.json()["feeds"]}
+
+        # MITRE ATT&CK — public endpoint, no API key needed — should reach active
+        assert "MITRE ATT&CK" in feeds, (
+            f"MITRE ATT&CK feed missing from registry. Registered feeds: {list(feeds.keys())}"
+        )
+        mitre = feeds["MITRE ATT&CK"]
+        assert mitre["status"] in ("active", "error", "pending"), (
+            f"Unexpected MITRE feed status: {mitre['status']!r}"
+        )
+
+        # MISP — registered but may be error in dev (no MISP_URL configured)
+        assert "MISP" in feeds, (
+            f"MISP feed missing from registry. Registered feeds: {list(feeds.keys())}"
+        )
+        misp = feeds["MISP"]
+        assert misp["status"] in ("active", "error", "pending"), (
+            f"Unexpected MISP feed status: {misp['status']!r}"
+        )
+
+    def test_all_seven_feeds_registered(self, api):
+        """
+        Phase 2 target: 7 intel feeds total.
+        MalwareBazaar, OTX, URLHaus, CISA KEV, AbuseIPDB, MISP, MITRE ATT&CK.
+        """
+        r = api.get("/api/v1/intel/feeds")
+        assert r.status_code == 200
+        feed_names = {f["name"] for f in r.json()["feeds"]}
+        required = {"MalwareBazaar", "URLHaus", "CISA KEV", "OTX", "AbuseIPDB", "MISP", "MITRE ATT&CK"}
+        missing = required - feed_names
+        assert not missing, (
+            f"Phase 2 intel feeds missing from registry: {missing}. "
+            f"Registered: {feed_names}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Scoring logic

@@ -70,34 +70,34 @@
 **Goal**: Cross-platform support + enterprise integrations.
 
 ### Agent
-- [ ] macOS port — Endpoint Security Framework (ESF)
-- [ ] Linux port — eBPF via `aya` crate
-- [ ] Optional whisper.cpp STT (opt-in via policy)
-- [ ] macOS TTS (AVSpeechSynthesizer)
-- [ ] Linux inotify filesystem collector
+- [x] macOS port — Endpoint Security Framework (ESF) — eslogger Approach A + FFI Approach B
+- [x] Linux port — eBPF via `aya` crate — ProcessCollector + NetworkCollector
+- [x] Optional whisper.cpp STT (opt-in via policy, `stt` feature flag)
+- [x] macOS TTS — `say` command (wraps AVSpeechSynthesizer natively)
+- [x] Linux inotify filesystem collector — cross-platform via `notify` crate
 
 ### Platform
-- [ ] SIEM connectors: Splunk HEC, Elasticsearch, Microsoft Sentinel
-- [ ] MISP bi-directional sharing
-- [ ] Custom rule development (web IDE in console)
-- [ ] Report generation (PDF export)
-- [ ] Staged update rollout with auto-rollback
-- [ ] Self-hosted deployment (Helm chart for RKE2)
+- [x] SIEM connectors: Splunk HEC, Elasticsearch, Microsoft Sentinel
+- [x] MISP bi-directional sharing — push verified IOCs back to MISP
+- [x] Custom rule development (web IDE in console)
+- [x] Report generation (PDF export via reportlab)
+- [x] Staged update rollout with auto-rollback
+- [x] Self-hosted deployment (Helm chart for RKE2)
 
 ### SDK
-- [ ] Integration SDK (SIEM/SOAR connector helpers)
+- [x] Integration SDK (SIEM/SOAR connector helpers) — `sdk/integration-sdk/`
 
 ## Phase 4 — AI-Enhanced Detection (Weeks 41–52)
 
 **Goal**: Autonomous threat correlation and hunting.
 
-- [ ] LangGraph + Claude Opus correlation agent for multi-incident pattern detection
-- [ ] Threat hunting query interface (natural language → structured query)
-- [ ] Automated incident root-cause analysis (Claude-generated narrative)
-- [ ] Endpoint risk scoring (lightweight XGBoost)
-- [ ] MITRE ATT&CK coverage heatmap per tenant
-- [ ] Adaptive sensitivity from false positive analyst feedback
-- [ ] Sovereign CI migration to Forgejo Actions
+- [x] LangGraph + Claude Opus correlation agent for multi-incident pattern detection
+- [x] Threat hunting query interface (natural language → structured query)
+- [x] Automated incident root-cause analysis (Claude-generated streaming narrative)
+- [x] Endpoint risk scoring (lightweight XGBoost + heuristic fallback)
+- [x] MITRE ATT&CK coverage heatmap per tenant
+- [x] Adaptive sensitivity from false positive analyst feedback
+- [x] Sovereign CI migration to Forgejo Actions
 
 ## Future Considerations
 

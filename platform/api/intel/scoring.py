@@ -22,6 +22,7 @@ FEED_BASE_WEIGHTS: dict[str, float] = {
 }
 
 MULTI_SOURCE_BONUS = 0.10
+COMMUNITY_SOURCE_BONUS = 0.20
 AGE_DECAY_FACTOR = 0.85
 AGE_DECAY_DAYS = 90
 INCLUSION_THRESHOLD = 0.50
@@ -41,7 +42,9 @@ def compute_score(
 
     # Multi-source bonus
     bonus = MULTI_SOURCE_BONUS if len(sources) >= 2 else 0.0
-    raw = min(1.0, base + bonus)
+    # Community corroboration bonus
+    community_bonus = COMMUNITY_SOURCE_BONUS if "community" in sources else 0.0
+    raw = min(1.0, base + bonus + community_bonus)
 
     # Age decay
     now = datetime.now(tz=timezone.utc)

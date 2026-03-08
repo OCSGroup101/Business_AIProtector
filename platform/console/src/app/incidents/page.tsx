@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { apiClient } from "@/lib/api";
@@ -160,6 +161,7 @@ function IncidentRow({
   onUpdateStatus: (status: IncidentStatus) => void;
   onIsolate: () => void;
 }) {
+  const router = useRouter();
   return (
     <tr className="border-b border-gray-800 last:border-0 hover:bg-gray-800/40 transition-colors">
       {/* Severity */}
@@ -171,9 +173,14 @@ function IncidentRow({
         </span>
       </td>
 
-      {/* Rule name */}
-      <td className="px-4 py-3 text-gray-200 max-w-xs truncate">
-        {incident.rule_name}
+      {/* Rule name — click to open detail page */}
+      <td className="px-4 py-3 max-w-xs">
+        <button
+          onClick={() => router.push(`/incidents/${incident.id}`)}
+          className="text-gray-200 hover:text-orange-400 transition-colors truncate text-left w-full"
+        >
+          {incident.rule_name}
+        </button>
       </td>
 
       {/* Hostname */}

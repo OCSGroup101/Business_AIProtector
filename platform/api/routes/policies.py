@@ -5,15 +5,16 @@ import tomllib
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, Depends, Path, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ulid import ULID
 
-from ..database import get_db
+from ..database import get_db, get_tenant_session
 from ..models.policy import Policy
-from ..middleware.rbac import Permission, require_permission
+from ..middleware.rbac import Permission, require_permission, Role
+from ..audit_service import emit as audit_emit
 
 logger = logging.getLogger(__name__)
 
@@ -168,23 +169,42 @@ async def update_policy_rule(
 
 @router.post("", response_model=PolicySummary, status_code=status.HTTP_201_CREATED)
 async def create_policy(
-    request: CreatePolicyRequest,
-    db: AsyncSession = Depends(get_db),
-    _role=Depends(require_permission(Permission.POLICIES_WRITE)),
+    body: CreatePolicyRequest = Body(...),
+    http_request: Request = None,  # type: ignore[assignment]
+    db: AsyncSession = Depends(get_tenant_session),
+    role: Role = Depends(require_permission(Permission.POLICIES_WRITE)),
 ) -> PolicySummary:
     """Create a new policy. TOML content will be validated and signed server-side."""
-    # Phase 1: Validate TOML schema, sign with platform key
+    tenant_id = (
+        getattr(http_request.state, "tenant_id", None) if http_request else None
+    ) or "dev_tenant"
+
     policy = Policy(
         id=f"pol_{ULID()}",
-        tenant_id="dev_tenant",  # Phase 1: from request context
-        name=request.name,
-        description=request.description,
-        content_toml=request.content_toml,
+        tenant_id=tenant_id,
+        name=body.name,
+        description=body.description,
+        content_toml=body.content_toml,
         version=1,
-        is_default=request.is_default,
+        is_default=body.is_default,
     )
     db.add(policy)
     await db.flush()
+
+    actor_ip = http_request.client.host if http_request and http_request.client else None
+    await audit_emit(
+        db,
+        actor_id=role.value,
+        actor_role=role.value,
+        actor_ip=actor_ip,
+        action="policy.created",
+        resource_type="policy",
+        resource_id=policy.id,
+        outcome="SUCCESS",
+        details={"name": policy.name},
+        tenant_id=tenant_id,
+    )
+
     logger.info("Policy created: %s (%s)", policy.id, policy.name)
     return PolicySummary(
         id=policy.id,

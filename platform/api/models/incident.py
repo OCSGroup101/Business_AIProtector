@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, JSON, String, Text, ForeignKey
+from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -47,6 +47,15 @@ class Incident(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+
+    # Phase 4: analyst false-positive feedback
+    is_false_positive: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True, default=None
+    )
+    fp_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    analyst_reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     events: Mapped[list["IncidentEvent"]] = relationship(

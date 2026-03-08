@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_tenant_session
 from ..incident_service import create_or_update_incident
+from ..kafka.producer import kafka_producer
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ async def ingest_telemetry_batch(
     Ingest a batch of telemetry events from an agent (NDJSON, one JSON object per line).
 
     Events that contain a non-empty `detections` array trigger incident creation.
-    All other events are accepted and acknowledged (Kafka forwarding in Phase 2).
+    All events are forwarded to Kafka for real-time streaming consumers.
     """
     body = await request.body()
     if not body:
@@ -74,6 +75,12 @@ async def ingest_telemetry_batch(
     incidents_updated = 0
 
     for event in events:
+        # Stream every event to Kafka for real-time consumers regardless of detections
+        try:
+            await kafka_producer.produce(tenant_id or "unknown", event)
+        except Exception:
+            logger.debug("Kafka produce skipped (not connected or feature disabled)")
+
         detections = event.get("detections") or []
         if not detections:
             continue

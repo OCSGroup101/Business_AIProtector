@@ -66,3 +66,73 @@ export interface ThreatFeed {
   status: "healthy" | "degraded" | "error" | "pending";
   error_message: string | null;
 }
+
+// Rules
+export type RuleMatchType = "ioc" | "behavioral" | "heuristic" | "sequence" | "threshold";
+
+export interface RuleFile {
+  id: string;
+  rule_id: string;
+  name: string;
+  pack: string;
+  match_type: RuleMatchType;
+  severity: Severity;
+  enabled: boolean;
+  last_modified: string;
+  valid: boolean;
+  validation_errors: string[] | null;
+  content_toml?: string;
+}
+
+export interface CreateRuleRequest {
+  content_toml: string;
+  pack?: string;
+}
+
+export interface RuleValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export interface RuleTestResult {
+  matched: boolean;
+  match_count: number;
+  matched_events: unknown[];
+  errors: string[];
+}
+
+// Reports
+export type ReportType = "incident_summary" | "executive_summary";
+export type ReportStatus = "pending" | "generating" | "complete" | "failed";
+
+export interface Report {
+  id: string;
+  type: ReportType;
+  period_days: number;
+  status: ReportStatus;
+  created_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
+// SIEM Connectors
+export type SiemConnectorType = "splunk" | "elasticsearch" | "sentinel";
+
+export interface SiemConnector {
+  id: string;
+  name: string;
+  type: SiemConnectorType;
+  enabled: boolean;
+  ssl_verify: boolean;
+  last_test_at: string | null;
+  last_test_ok: boolean | null;
+  last_test_error: string | null;
+  config: Record<string, string>;
+}
+
+export interface CreateSiemConnectorRequest {
+  name: string;
+  type: SiemConnectorType;
+  ssl_verify: boolean;
+  config: Record<string, string>;
+}

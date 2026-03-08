@@ -19,15 +19,28 @@ from .routes import (
     agents,
     audit,
     cert_renewal,
+    community_ioc,
+    correlation,
+    coverage,
+    deployments,
     enrollment,
+    feedback,
     heartbeat,
+    hunting,
     incidents,
     intel,
+    intel_feeds,
     policies,
+    reports,
+    risk,
+    rules,
+    siem,
     telemetry,
 )
 from .database import engine, Base
 from .intel.feed_runner import start_feed_tasks
+from .kafka.producer import kafka_producer
+from .kafka.consumer import kafka_consumer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,6 +57,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Start background threat intelligence feed tasks
     feed_tasks = start_feed_tasks()
 
+    # Start Kafka producer and consumer
+    await kafka_producer.start()
+    await kafka_consumer.start()
+
     # In dev mode, create all tables directly (no Alembic migration needed).
     # In production, migrations are applied explicitly before startup.
     if os.getenv("OPENCLAW_DEV_MODE", "").lower() == "true":
@@ -55,6 +72,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Cancel feed tasks on shutdown
     for task in feed_tasks:
         task.cancel()
+
+    await kafka_consumer.stop()
+    await kafka_producer.stop()
 
     logger.info("OpenClaw Platform API shutting down")
     await engine.dispose()
@@ -94,7 +114,18 @@ app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["incident
 app.include_router(policies.router, prefix="/api/v1/policies", tags=["policies"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
 app.include_router(intel.router, prefix="/api/v1/intel", tags=["intelligence"])
+app.include_router(intel_feeds.router, prefix="/api/v1/intel/custom-feeds", tags=["intelligence"])
+app.include_router(community_ioc.router, prefix="/api/v1/intel/community", tags=["intelligence"])
 app.include_router(audit.router, prefix="/api/v1/audit", tags=["audit"])
+app.include_router(rules.router, prefix="/api/v1/rules", tags=["rules"])
+app.include_router(siem.router, prefix="/api/v1/siem", tags=["siem"])
+app.include_router(deployments.router, prefix="/api/v1/deployments", tags=["deployments"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
+app.include_router(correlation.router, prefix="/api/v1/correlation", tags=["ai"])
+app.include_router(hunting.router, prefix="/api/v1/hunting", tags=["ai"])
+app.include_router(risk.router, prefix="/api/v1", tags=["ai"])
+app.include_router(coverage.router, prefix="/api/v1/coverage", tags=["ai"])
+app.include_router(feedback.router, prefix="/api/v1/incidents", tags=["ai"])
 
 
 # ─── Health check ─────────────────────────────────────────────────────────────

@@ -366,6 +366,94 @@ class TestIncidentWorkflow:
 
 
 # ---------------------------------------------------------------------------
+# Resolve / assign lifecycle (Phase 2)
+# ---------------------------------------------------------------------------
+
+class TestIncidentResolveAndAssign:
+    """Verify the resolve and assign endpoints introduced in Phase 2."""
+
+    def test_resolve_sets_resolved_at(self, api_client):
+        """POST /resolve must set status=RESOLVED and populate resolved_at."""
+        agent_id = f"e2e-res-{uuid.uuid4().hex[:12]}"
+        rule_id = "OC-TEST-RES-001"
+        body = _telemetry_event(agent_id, rule_id, "E2E: Resolve Test", "HIGH")
+
+        r = api_client.post(
+            "/api/v1/telemetry/batch",
+            content=body,
+            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
+                     "Content-Type": "application/x-ndjson"},
+        )
+        assert r.status_code == 202
+        incident_id = api_client.get(
+            "/api/v1/incidents", params={"agent_id": agent_id}
+        ).json()[0]["id"]
+
+        # Transition to INVESTIGATING first (resolve requires this)
+        api_client.patch(f"/api/v1/incidents/{incident_id}", json={"status": "INVESTIGATING"})
+
+        # Resolve with notes
+        r2 = api_client.post(
+            f"/api/v1/incidents/{incident_id}/resolve",
+            json={"resolution_notes": "confirmed malicious, remediated"},
+        )
+        assert r2.status_code == 200, f"Resolve failed: {r2.status_code} {r2.text}"
+        data = r2.json()
+        assert data["status"] == "RESOLVED", f"Expected RESOLVED, got {data['status']}"
+        assert data.get("resolved_at") is not None, "resolved_at must be set after resolve"
+
+    def test_assign_sets_assigned_to(self, api_client):
+        """POST /assign must set assigned_to on the incident."""
+        agent_id = f"e2e-asgn-{uuid.uuid4().hex[:12]}"
+        rule_id = "OC-TEST-ASGN-001"
+        body = _telemetry_event(agent_id, rule_id, "E2E: Assign Test", "MEDIUM")
+
+        r = api_client.post(
+            "/api/v1/telemetry/batch",
+            content=body,
+            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
+                     "Content-Type": "application/x-ndjson"},
+        )
+        assert r.status_code == 202
+        incident_id = api_client.get(
+            "/api/v1/incidents", params={"agent_id": agent_id}
+        ).json()[0]["id"]
+
+        r2 = api_client.post(
+            f"/api/v1/incidents/{incident_id}/assign",
+            json={"assigned_to": "analyst_alice"},
+        )
+        assert r2.status_code == 200, f"Assign failed: {r2.status_code} {r2.text}"
+        data = r2.json()
+        assert data.get("assigned_to") == "analyst_alice", (
+            f"Expected assigned_to='analyst_alice', got {data.get('assigned_to')}"
+        )
+
+    def test_timeline_endpoint_returns_events(self, api_client):
+        """GET /incidents/{id}/timeline must return a paginated list of events."""
+        agent_id = f"e2e-tl-{uuid.uuid4().hex[:12]}"
+        rule_id = "OC-TEST-TL-001"
+        body = _telemetry_event(agent_id, rule_id, "E2E: Timeline Test", "LOW")
+
+        r = api_client.post(
+            "/api/v1/telemetry/batch",
+            content=body,
+            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
+                     "Content-Type": "application/x-ndjson"},
+        )
+        assert r.status_code == 202
+        incident_id = api_client.get(
+            "/api/v1/incidents", params={"agent_id": agent_id}
+        ).json()[0]["id"]
+
+        r2 = api_client.get(f"/api/v1/incidents/{incident_id}/timeline")
+        assert r2.status_code == 200, f"Timeline failed: {r2.status_code} {r2.text}"
+        data = r2.json()
+        assert "events" in data, "Timeline response must have 'events' key"
+        assert "total" in data, "Timeline response must have 'total' key"
+
+
+# ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
 

@@ -17,3 +17,7 @@ minisign==0.1.0
 python-multipart==0.0.12
 structlog==24.4.0
 prometheus-fastapi-instrumentator==7.0.0
+reportlab==4.2.2
+anthropic>=0.50.0
+xgboost>=2.0.0
+joblib>=1.3.0

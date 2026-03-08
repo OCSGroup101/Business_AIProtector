@@ -1,0 +1,76 @@
+{
+  "events": [
+    {
+      "event_id": "01HZ000000000000000000PROC1",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "process",
+      "event_type": "process_create",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": null,
+      "payload": {
+        "process_name": "powershell.exe",
+        "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "pid": 4321,
+        "ppid": 1234,
+        "command_line": "powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand base64"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:00:00Z"
+    },
+    {
+      "event_id": "01HZ000000000000000000PROC2",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "process",
+      "event_type": "process_create",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": null,
+      "payload": {
+        "process_name": "notepad.exe",
+        "image_path": "C:\\Windows\\System32\\notepad.exe",
+        "pid": 5678,
+        "ppid": 1000,
+        "command_line": "notepad.exe C:\\Users\\user\\document.txt"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:00:05Z"
+    },
+    {
+      "event_id": "01HZ000000000000000000PROC3",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "process",
+      "event_type": "process_create",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": null,
+      "payload": {
+        "process_name": "cmd.exe",
+        "image_path": "C:\\Windows\\System32\\cmd.exe",
+        "pid": 9999,
+        "ppid": 1234,
+        "command_line": "cmd.exe /c whoami"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:00:10Z"
+    }
+  ]
+}

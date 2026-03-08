@@ -209,6 +209,32 @@ def client_auditor():
         yield c
 
 
+@pytest.fixture(scope="module")
+def client_helpdesk():
+    with httpx.Client(
+        base_url=PLATFORM_URL,
+        headers={
+            "Authorization": "Bearer dev-helpdesk-token",
+            "X-Tenant-ID": TENANT_A,
+        },
+        timeout=10,
+    ) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def client_security():
+    with httpx.Client(
+        base_url=PLATFORM_URL,
+        headers={
+            "Authorization": "Bearer dev-security-token",
+            "X-Tenant-ID": TENANT_A,
+        },
+        timeout=10,
+    ) as c:
+        yield c
+
+
 # ---------------------------------------------------------------------------
 # Pre-check
 # ---------------------------------------------------------------------------
@@ -456,6 +482,55 @@ class TestRBACIsolation:
         assert r2.status_code in (200, 404), (
             f"Admin cannot update incident: {r2.status_code}"
         )
+
+    def test_helpdesk_cannot_create_policy(self, client_helpdesk):
+        """HELPDESK role must get 403 when creating a policy (lacks policies:write)."""
+        r = client_helpdesk.post(
+            "/api/v1/policies",
+            json={"name": "Helpdesk Policy Attempt", "content_toml": "[policy]\n"},
+        )
+        assert r.status_code == 403, (
+            f"HELPDESK was able to create a policy! Got {r.status_code}. RBAC broken."
+        )
+
+    def test_helpdesk_can_read_incidents(self, client_helpdesk):
+        """HELPDESK must be able to read incidents (has incidents:read permission)."""
+        r = client_helpdesk.get("/api/v1/incidents")
+        assert r.status_code in (200, 404), (
+            f"HELPDESK cannot read incidents: {r.status_code}"
+        )
+
+    def test_security_admin_can_create_policy(self, client_security):
+        """SECURITY_ADMIN must be able to create policies (has policies:write)."""
+        r = client_security.post(
+            "/api/v1/policies",
+            json={"name": "Security Admin Policy", "content_toml": "[[rules]]\nid = \"test\"\n"},
+        )
+        # 200/201 = created, 422 = validation error (content ok, schema issue) — both mean RBAC passed
+        assert r.status_code in (200, 201, 422), (
+            f"SECURITY_ADMIN was blocked from creating a policy: {r.status_code}"
+        )
+
+    def test_all_four_dev_tokens_map_to_distinct_roles(self):
+        """Verify each dev token produces the expected RBAC behaviour."""
+        token_expectations = [
+            ("dev-admin-token", "/api/v1/policies", "POST", 200, 422),  # TENANT_ADMIN: write allowed
+            ("dev-security-token", "/api/v1/policies", "POST", 200, 422),  # SECURITY_ADMIN: write allowed
+            ("dev-helpdesk-token", "/api/v1/policies", "POST", 403, 403),  # HELPDESK: write denied
+            ("dev-auditor-token", "/api/v1/policies", "POST", 403, 403),  # AUDITOR: write denied
+        ]
+        for token, path, method, status_min, status_max in token_expectations:
+            headers = {"Authorization": f"Bearer {token}", "X-Tenant-ID": TENANT_A}
+            r = httpx.request(
+                method, f"{PLATFORM_URL}{path}",
+                json={"name": "Token Role Test", "content_toml": "[[rules]]\n"},
+                headers=headers,
+                timeout=10,
+            )
+            assert status_min <= r.status_code <= status_max, (
+                f"Token {token!r}: expected status {status_min}–{status_max}, "
+                f"got {r.status_code} for {method} {path}"
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,107 @@
+{
+  "events": [
+    {
+      "event_id": "01HZ000000000000000000AUTH1",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "auth",
+      "event_type": "auth_logon_failure",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": {
+        "user": "administrator",
+        "sid": null,
+        "elevated": false
+      },
+      "payload": {
+        "event_id": 4625,
+        "src_ip": "192.168.1.100",
+        "details": "Invalid username or password"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:01:00Z"
+    },
+    {
+      "event_id": "01HZ000000000000000000AUTH2",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "auth",
+      "event_type": "auth_logon_failure",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": {
+        "user": "administrator",
+        "sid": null,
+        "elevated": false
+      },
+      "payload": {
+        "event_id": 4625,
+        "src_ip": "192.168.1.100",
+        "details": "Invalid username or password"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:01:15Z"
+    },
+    {
+      "event_id": "01HZ000000000000000000AUTH3",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "auth",
+      "event_type": "auth_logon_failure",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": {
+        "user": "administrator",
+        "sid": null,
+        "elevated": false
+      },
+      "payload": {
+        "event_id": 4625,
+        "src_ip": "192.168.1.100",
+        "details": "Invalid username or password"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:01:30Z"
+    },
+    {
+      "event_id": "01HZ000000000000000000AUTH4",
+      "tenant_id": "test_tenant",
+      "agent_id": "test_agent_001",
+      "source": "auth",
+      "event_type": "auth_logon",
+      "hostname": "TESTHOST-WIN01",
+      "os_info": {
+        "platform": "windows",
+        "version": "10.0.19044",
+        "arch": "x86_64"
+      },
+      "principal": {
+        "user": "administrator",
+        "sid": "S-1-5-21-1234567890-987654321-0000000001-500",
+        "elevated": true
+      },
+      "payload": {
+        "event_id": 4624,
+        "src_ip": "192.168.1.100"
+      },
+      "tags": [],
+      "detections": [],
+      "timestamp": "2026-03-08T10:01:45Z"
+    }
+  ]
+}
