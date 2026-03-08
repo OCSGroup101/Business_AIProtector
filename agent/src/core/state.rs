@@ -199,6 +199,7 @@ mod tests {
             collectors: Default::default(),
             detection: Default::default(),
             assistant: Default::default(),
+            kafka: None,
         }
     }
 

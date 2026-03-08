@@ -250,8 +250,6 @@ mod tests {
 
     #[test]
     fn test_ed25519_roundtrip() {
-        use ring::rand::SecureRandom;
-
         let rng = SystemRandom::new();
         // Generate an Ed25519 keypair using PKCS#8 DER
         let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();

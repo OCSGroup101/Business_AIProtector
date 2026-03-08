@@ -2,7 +2,7 @@
 //
 // ESF process event parser — ES_EVENT_TYPE_NOTIFY_EXEC → ProcessCreate
 
-use crate::core::event_bus::{EventPublisher, EventType, OsInfo, TelemetryEvent};
+use crate::core::event_bus::{EventType, OsInfo, TelemetryEvent};
 
 pub fn parse_exec_event(
     v: &serde_json::Value,
