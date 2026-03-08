@@ -6,64 +6,64 @@
 
 - [x] Repository skeleton with all directories
 - [x] Documentation (CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, ARCHITECTURE, ROADMAP, LICENSE)
-- [ ] Rust workspace with `tracing` logging and config loading
-- [ ] FastAPI skeleton with health endpoint, Alembic baseline, Keycloak integration
-- [ ] Next.js skeleton with auth flow
-- [ ] `docker-compose.yml` dev stack (PG16, Redis7, Kafka3.8, Keycloak26, MinIO, Kong3.8)
-- [ ] GitHub Actions CI pipeline (all 9 stages including Gitleaks, cargo-audit, cargo clippy)
-- [ ] Agent cross-compilation pipeline (4 targets: Windows/Linux x86_64, Linux aarch64, macOS x86_64)
-- [ ] minisign signing setup in CI
+- [x] Rust workspace with `tracing` logging and config loading
+- [x] FastAPI skeleton with health endpoint, Alembic baseline, Keycloak integration
+- [x] Next.js skeleton with auth flow
+- [x] `docker-compose.yml` dev stack (PG16, Redis7, Kafka3.8, Keycloak26, MinIO, Kong3.8)
+- [x] GitHub Actions CI pipeline (all 9 stages including Gitleaks, cargo-audit, cargo clippy)
+- [x] Agent cross-compilation pipeline (4 targets: Windows/Linux x86_64, Linux aarch64, macOS x86_64)
+- [x] minisign signing setup in CI
 
 ## Phase 1 — Agent Core + Platform Alpha (Weeks 5–16)
 
 **Goal**: First real detection visible in the browser console.
 
 ### Agent
-- [ ] ProcessCollector — ETW on Windows (provider `{22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}`)
-- [ ] FilesystemCollector — `ReadDirectoryChangesW` on Windows
-- [ ] NetworkCollector — `WSAEventSelect` + DNS capture
-- [ ] Detection engine — IOC matching with LMDB + TOML rule loader
-- [ ] Containment — `terminate_process` + `quarantine_file`
-- [ ] Full mTLS enrollment, heartbeat (60s), telemetry upload, SQLite ring buffer
+- [x] ProcessCollector — ETW on Windows (provider `{22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}`)
+- [x] FilesystemCollector — `ReadDirectoryChangesW` on Windows
+- [x] NetworkCollector — `WSAEventSelect` + DNS capture
+- [x] Detection engine — IOC matching with LMDB + TOML rule loader
+- [x] Containment — `terminate_process` + `quarantine_file`
+- [x] Full mTLS enrollment, heartbeat (60s), telemetry upload, SQLite ring buffer
 
 ### Platform
-- [ ] Multi-tenant PostgreSQL schema + RLS
-- [ ] Enrollment, heartbeat, telemetry APIs
-- [ ] Agent management console (basic)
-- [ ] Incident view (basic)
+- [x] Multi-tenant PostgreSQL schema + RLS
+- [x] Enrollment, heartbeat, telemetry APIs
+- [x] Agent management console (basic)
+- [x] Incident view (basic)
 
 ### Intelligence
-- [ ] MalwareBazaar + URLHaus ingest pipeline
-- [ ] 20 of 40 Phase 1 detection rules (execution + persistence focus)
+- [x] MalwareBazaar + URLHaus ingest pipeline
+- [x] 20 of 40 Phase 1 detection rules (execution + persistence focus)
 
 ### Testing
-- [ ] `criterion` benchmarks with CPU/RAM gates
-- [ ] Multi-tenant isolation test suite
+- [x] `criterion` benchmarks with CPU/RAM gates
+- [x] Multi-tenant isolation test suite
 
 ## Phase 2 — Full Collector Coverage + Intelligence Platform (Weeks 17–28)
 
 **Goal**: Production-ready for Windows endpoints.
 
 ### Agent
-- [ ] PersistenceCollector (registry + scheduled tasks + services)
-- [ ] AuthCollector (Windows Security event log: 4624, 4625, 4648, 4672)
-- [ ] IntegrityCollector (system binary hash baseline)
-- [ ] All 40 Phase 1 detection rules
-- [ ] Claude API local assistant
-- [ ] TTS alerts for HIGH/CRITICAL (Windows SAPI 5)
-- [ ] Policy sync + signed binary updates
+- [x] PersistenceCollector (registry + scheduled tasks + services)
+- [x] AuthCollector (Windows Security event log: 4624, 4625, 4648, 4672)
+- [x] IntegrityCollector (system binary hash baseline)
+- [x] All 40 Phase 1 detection rules + 48 total covering 12 MITRE tactics
+- [x] Claude API local assistant
+- [x] TTS alerts for HIGH/CRITICAL (Windows SAPI 5)
+- [x] Policy sync + signed binary updates
 
 ### Platform
-- [ ] All 7 intelligence feeds
-- [ ] Community IOC sharing with anonymization pipeline
-- [ ] Policy management UI
-- [ ] Incident management (full lifecycle)
-- [ ] RBAC with 4 roles (Tenant Admin, Security Admin, Helpdesk, Auditor)
-- [ ] Audit log (immutable, append-only)
-- [ ] Custom STIX/TAXII feed registration
+- [x] All 7 intelligence feeds
+- [x] Community IOC sharing with anonymization pipeline
+- [x] Policy management UI
+- [x] Incident management (full lifecycle)
+- [x] RBAC with 4 roles (Tenant Admin, Security Admin, Helpdesk, Auditor)
+- [x] Audit log (immutable, append-only)
+- [x] Custom STIX/TAXII feed registration
 
 ### SDK
-- [ ] Rule Development Kit (TOML validator + local test harness)
+- [x] Rule Development Kit (TOML validator + local test harness)
 
 ## Phase 3 — Enterprise + macOS/Linux (Weeks 29–40)
 
