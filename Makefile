@@ -28,10 +28,21 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  $(CYAN)%-24s$(RESET) %s\n", $$1, $$2}'
 
 # ─── Dev Stack ────────────────────────────────────────────────────────────
-dev-up: ## Start the full development stack (infra only — API and console run separately)
+dev-up: _gen-kong-certs ## Start the full development stack (infra only — API and console run separately)
 	@echo -e "$(GREEN)Starting OpenClaw dev stack...$(RESET)"
 	@test -f .env || cp .env.example .env
 	docker compose up -d
+
+_gen-kong-certs: ## Generate self-signed Kong dev TLS cert if not present (gitignored)
+	@if [ ! -f platform/deployment/kong/certs/tls.crt ]; then \
+		echo -e "$(YELLOW)Generating self-signed Kong dev TLS certificate...$(RESET)"; \
+		openssl req -x509 -newkey rsa:2048 \
+			-keyout platform/deployment/kong/certs/tls.key \
+			-out platform/deployment/kong/certs/tls.crt \
+			-days 365 -nodes \
+			-subj "/CN=openclaw-dev/O=Omni Cyber Solutions LLC" 2>/dev/null; \
+		echo -e "$(GREEN)Kong dev cert generated.$(RESET)"; \
+	fi
 	@echo -e "$(GREEN)Infra ready. Next steps:$(RESET)"
 	@echo -e "  1.  make dev-init          (first time only — migrate DB + seed dev tenant)"
 	@echo -e "  2a. cd platform/api && uvicorn main:app --reload --port 8000"

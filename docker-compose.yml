@@ -165,11 +165,12 @@ services:
       - openclaw-internal
       - openclaw-external
     healthcheck:
-      # Keycloak 26 moved the health endpoint to the management interface
-      # (port 9000) in start-dev mode; port 8080 returns 404 for /health/*.
-      test: ["CMD-SHELL", "curl -sf http://localhost:9000/health/ready || exit 1"]
+      # Keycloak 26 start-dev: management port (9000) is not enabled by default;
+      # curl/wget are absent from the image.  Probe port 8080 via /proc/net/tcp6
+      # (0x1F90 = 8080 decimal) — reliable, zero external deps.
+      test: ["CMD-SHELL", "grep -q '1F90' /proc/net/tcp6"]
       interval: 20s
-      timeout: 15s
+      timeout: 10s
       retries: 15
       start_period: 90s
     logging: *default-logging
