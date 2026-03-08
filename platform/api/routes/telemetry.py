@@ -70,7 +70,8 @@ async def ingest_telemetry_batch(
 
     # Determine tenant_id and agent hostname from events / headers
     tenant_id = x_tenant_id or request.state.__dict__.get("tenant_id", "")
-    incidents_touched = set()
+    incidents_created = 0
+    incidents_updated = 0
 
     for event in events:
         detections = event.get("detections") or []
@@ -82,7 +83,7 @@ async def ingest_telemetry_batch(
 
         for detection in detections:
             try:
-                incident_id = await create_or_update_incident(
+                result = await create_or_update_incident(
                     db=db,
                     tenant_id=tenant_id,
                     agent_id=agent_id,
@@ -90,8 +91,12 @@ async def ingest_telemetry_batch(
                     detection=detection,
                     raw_event=event,
                 )
-                if incident_id:
-                    incidents_touched.add(incident_id)
+                if result:
+                    _, is_new = result
+                    if is_new:
+                        incidents_created += 1
+                    else:
+                        incidents_updated += 1
             except Exception:
                 logger.exception(
                     "Failed to create/update incident for agent=%s rule=%s",
@@ -100,15 +105,17 @@ async def ingest_telemetry_batch(
                 )
 
     logger.info(
-        "Telemetry batch: agent=%s events=%d errors=%d incidents=%d",
+        "Telemetry batch: agent=%s events=%d errors=%d incidents_created=%d incidents_updated=%d",
         _safe(x_agent_id),
         len(events),
         parse_errors,
-        len(incidents_touched),
+        incidents_created,
+        incidents_updated,
     )
 
     return {
         "accepted": len(events),
         "errors": parse_errors,
-        "incidents_created": len(incidents_touched),
+        "incidents_created": incidents_created,
+        "incidents_updated": incidents_updated,
     }

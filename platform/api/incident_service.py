@@ -51,7 +51,7 @@ async def create_or_update_incident(
     hostname: str,
     detection: dict,
     raw_event: dict,
-) -> Optional[str]:
+) -> Optional[tuple[str, bool]]:
     """
     Upsert an incident from a detection hit.
 
@@ -65,7 +65,8 @@ async def create_or_update_incident(
 
     `raw_event` is the full TelemetryEvent dict.
 
-    Returns the incident ID on success, None on failure.
+    Returns (incident_id, is_new) on success, None on failure.
+    is_new is True when a new incident was created, False when an existing one was updated.
     """
     rule_id = detection.get("rule_id", "unknown")
     rule_name = detection.get("rule_name", rule_id)
@@ -90,7 +91,8 @@ async def create_or_update_incident(
     )
     incident = existing.scalar_one_or_none()
 
-    if incident is None:
+    is_new = incident is None
+    if is_new:
         # Create new incident
         incident_id = _make_incident_id(agent_id, rule_id, now)
         incident = Incident(
@@ -149,4 +151,4 @@ async def create_or_update_incident(
         )
         db.add(ie)
 
-    return incident.id
+    return incident.id, is_new
