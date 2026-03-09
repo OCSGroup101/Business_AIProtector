@@ -111,7 +111,7 @@ windows = { version = "0.57", features = [
 security-framework = "2.10"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-aya = { version = "0.12", optional = true }
+aya = { version = "0.13", optional = true }
 aya-log = { version = "0.2", optional = true }
 # bytes is a transitive dep of aya; declare it explicitly so ebpf/mod.rs can use BytesMut
 bytes = { version = "1", optional = true }
