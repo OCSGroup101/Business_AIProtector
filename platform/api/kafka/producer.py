@@ -39,7 +39,9 @@ class KafkaProducerService:
             await self._producer.start()
             logger.info("Kafka producer started (brokers=%s)", KAFKA_BROKERS)
         except Exception as exc:
-            logger.warning("Kafka producer failed to start: %s — events will not stream", exc)
+            logger.warning(
+                "Kafka producer failed to start: %s — events will not stream", exc
+            )
             self._producer = None
 
     async def stop(self) -> None:

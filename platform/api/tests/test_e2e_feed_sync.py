@@ -22,8 +22,6 @@ import hashlib
 import json
 import os
 import subprocess
-import time
-import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -41,6 +39,7 @@ INCLUSION_THRESHOLD = 0.50  # must match scoring.py
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _api_headers() -> dict:
     return {"Authorization": f"Bearer {ADMIN_TOKEN}"}
@@ -117,6 +116,7 @@ def _db_reachable() -> bool:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def api():
     with httpx.Client(base_url=PLATFORM_URL, headers=_api_headers(), timeout=15) as c:
@@ -126,6 +126,7 @@ def api():
 # ---------------------------------------------------------------------------
 # Pre-check
 # ---------------------------------------------------------------------------
+
 
 class TestFeedPreCheck:
     def test_platform_ready(self, api):
@@ -143,6 +144,7 @@ class TestFeedPreCheck:
 # ---------------------------------------------------------------------------
 # IOC bundle endpoint — structure and format
 # ---------------------------------------------------------------------------
+
 
 class TestIocBundleFormat:
     def test_bundle_returns_ndjson(self, api):
@@ -187,6 +189,7 @@ class TestIocBundleFormat:
 # ---------------------------------------------------------------------------
 # IOC seeding and retrieval
 # ---------------------------------------------------------------------------
+
 
 class TestIocPipeline:
     """Seed IOCs directly into the DB and verify the bundle endpoint serves them."""
@@ -260,7 +263,9 @@ class TestIocPipeline:
         """Active IOCs above threshold must appear as action=upsert."""
         r = api.get("/api/v1/intel/ioc-bundle")
         assert r.status_code == 200
-        records = [json.loads(l) for l in r.text.strip().splitlines() if l.strip()]
+        records = [
+            json.loads(line) for line in r.text.strip().splitlines() if line.strip()
+        ]
 
         upsert_values = {rec["value"] for rec in records if rec["action"] == "upsert"}
         assert "e2e_" + "a" * 59 in upsert_values, (
@@ -277,7 +282,9 @@ class TestIocPipeline:
         """IOCs with score < 0.50 must not appear in the bundle."""
         r = api.get("/api/v1/intel/ioc-bundle")
         assert r.status_code == 200
-        records = [json.loads(l) for l in r.text.strip().splitlines() if l.strip()]
+        records = [
+            json.loads(line) for line in r.text.strip().splitlines() if line.strip()
+        ]
         all_values = {rec["value"] for rec in records}
         assert "192.0.2.100" not in all_values, (
             "Below-threshold IOC (score=0.30) must not appear in bundle"
@@ -287,7 +294,9 @@ class TestIocPipeline:
         """Inactive IOCs above threshold must appear as action=delete."""
         r = api.get("/api/v1/intel/ioc-bundle")
         assert r.status_code == 200
-        records = [json.loads(l) for l in r.text.strip().splitlines() if l.strip()]
+        records = [
+            json.loads(line) for line in r.text.strip().splitlines() if line.strip()
+        ]
         delete_values = {rec["value"] for rec in records if rec["action"] == "delete"}
         assert "e2e-old-threat.invalid" in delete_values, (
             "Inactive IOC must appear with action=delete"
@@ -297,7 +306,9 @@ class TestIocPipeline:
         """Upsert records must include score and metadata fields."""
         r = api.get("/api/v1/intel/ioc-bundle")
         assert r.status_code == 200
-        records = [json.loads(l) for l in r.text.strip().splitlines() if l.strip()]
+        records = [
+            json.loads(line) for line in r.text.strip().splitlines() if line.strip()
+        ]
         upserts = [rec for rec in records if rec["action"] == "upsert"]
         assert upserts, "No upsert records in bundle"
         for rec in upserts:
@@ -309,7 +320,7 @@ class TestIocPipeline:
         """X-IOC-Count header must match the number of NDJSON lines."""
         r = api.get("/api/v1/intel/ioc-bundle")
         assert r.status_code == 200
-        line_count = sum(1 for l in r.text.strip().splitlines() if l.strip())
+        line_count = sum(1 for line in r.text.strip().splitlines() if line.strip())
         count_hdr = int(r.headers["X-IOC-Count"])
         assert count_hdr == line_count, (
             f"X-IOC-Count={count_hdr} but body has {line_count} lines"
@@ -319,6 +330,7 @@ class TestIocPipeline:
 # ---------------------------------------------------------------------------
 # Delta sync (since parameter)
 # ---------------------------------------------------------------------------
+
 
 class TestDeltaSync:
     """Verify the ?since= parameter enables incremental agent updates."""
@@ -357,9 +369,7 @@ class TestDeltaSync:
         r = api.get("/api/v1/intel/ioc-bundle", params={"since": past})
         assert r.status_code == 200
         count = int(r.headers.get("X-IOC-Count", "0"))
-        assert count >= 1, (
-            f"Expected at least 1 IOC with since=5min ago, got {count}"
-        )
+        assert count >= 1, f"Expected at least 1 IOC with since=5min ago, got {count}"
 
     def test_since_filters_old_iocs(self, api):
         """Only IOCs updated after ?since= must be returned."""
@@ -387,7 +397,9 @@ DO UPDATE SET updated_at = EXCLUDED.updated_at;
         since_1h = (datetime.now(tz=timezone.utc) - timedelta(hours=1)).isoformat()
         r = api.get("/api/v1/intel/ioc-bundle", params={"since": since_1h})
         assert r.status_code == 200
-        records = [json.loads(l) for l in r.text.strip().splitlines() if l.strip()]
+        records = [
+            json.loads(line) for line in r.text.strip().splitlines() if line.strip()
+        ]
         all_values = {rec["value"] for rec in records}
         assert old_value not in all_values, (
             f"Old IOC (updated 2h ago) must not appear in since=1h bundle, got: {all_values}"
@@ -397,6 +409,7 @@ DO UPDATE SET updated_at = EXCLUDED.updated_at;
 # ---------------------------------------------------------------------------
 # Feed status registry
 # ---------------------------------------------------------------------------
+
 
 class TestFeedStatus:
     def test_feeds_endpoint_lists_all_feeds(self, api):
@@ -478,7 +491,15 @@ class TestFeedStatus:
         r = api.get("/api/v1/intel/feeds")
         assert r.status_code == 200
         feed_names = {f["name"] for f in r.json()["feeds"]}
-        required = {"MalwareBazaar", "URLHaus", "CISA KEV", "OTX", "AbuseIPDB", "MISP", "MITRE ATT&CK"}
+        required = {
+            "MalwareBazaar",
+            "URLHaus",
+            "CISA KEV",
+            "OTX",
+            "AbuseIPDB",
+            "MISP",
+            "MITRE ATT&CK",
+        }
         missing = required - feed_names
         assert not missing, (
             f"Phase 2 intel feeds missing from registry: {missing}. "
@@ -490,6 +511,7 @@ class TestFeedStatus:
 # Scoring logic
 # ---------------------------------------------------------------------------
 
+
 class TestScoringThreshold:
     """Verify the scoring model enforces the inclusion threshold correctly."""
 
@@ -500,11 +522,21 @@ class TestScoringThreshold:
         now = datetime.now(tz=timezone.utc)
         iocs = [
             # Exactly at threshold — must be included
-            {"ioc_type": "domain", "value": "e2e-score-exact.invalid",
-             "score": 0.50, "sources": ["test"], "first_seen": now},
+            {
+                "ioc_type": "domain",
+                "value": "e2e-score-exact.invalid",
+                "score": 0.50,
+                "sources": ["test"],
+                "first_seen": now,
+            },
             # Just below — must be excluded
-            {"ioc_type": "domain", "value": "e2e-score-below.invalid",
-             "score": 0.49, "sources": ["test"], "first_seen": now},
+            {
+                "ioc_type": "domain",
+                "value": "e2e-score-below.invalid",
+                "score": 0.49,
+                "sources": ["test"],
+                "first_seen": now,
+            },
         ]
         for ioc in iocs:
             self._seeded_ids.append(_ioc_id(ioc["ioc_type"], ioc["value"]))
@@ -516,7 +548,9 @@ class TestScoringThreshold:
         """Score == 0.50 is included; score == 0.49 is excluded."""
         r = api.get("/api/v1/intel/ioc-bundle")
         assert r.status_code == 200
-        records = [json.loads(l) for l in r.text.strip().splitlines() if l.strip()]
+        records = [
+            json.loads(line) for line in r.text.strip().splitlines() if line.strip()
+        ]
         values = {rec["value"] for rec in records}
 
         assert "e2e-score-exact.invalid" in values, (

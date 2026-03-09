@@ -85,9 +85,7 @@ async def stream_root_cause(
     tenant_id = tenant_id or "dev_tenant"
 
     # Fetch the incident
-    result = await db.execute(
-        select(Incident).where(Incident.id == incident_id)
-    )
+    result = await db.execute(select(Incident).where(Incident.id == incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
         raise HTTPException(
@@ -140,11 +138,12 @@ async def stream_root_cause(
                         and hasattr(event.delta, "type")
                         and event.delta.type == "text_delta"
                     ):
-                        chunk = event.delta.text.replace("\n", "\\n")
-                        yield f'data: {json.dumps({"chunk": event.delta.text})}\n\n'
+                        yield f"data: {json.dumps({'chunk': event.delta.text})}\n\n"
         except Exception as exc:
-            logger.error("Root-cause stream failed for incident %s: %s", incident_id, exc)
-            yield f'data: {json.dumps({"error": "Stream error occurred"})}\n\n'
+            logger.error(
+                "Root-cause stream failed for incident %s: %s", incident_id, exc
+            )
+            yield f"data: {json.dumps({'error': 'Stream error occurred'})}\n\n"
 
         yield 'data: {"done": true}\n\n'
 

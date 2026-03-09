@@ -2,7 +2,6 @@
 """Feature extraction for endpoint risk scoring."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

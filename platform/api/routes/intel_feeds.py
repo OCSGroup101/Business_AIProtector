@@ -72,7 +72,9 @@ def _decrypt_api_key(encrypted: str) -> str:
     """Decrypt an AES-256-GCM encrypted API key."""
     nonce_hex, ct_hex = encrypted.split(":", 1)
     aesgcm = AESGCM(_AES_KEY)
-    return aesgcm.decrypt(bytes.fromhex(nonce_hex), bytes.fromhex(ct_hex), None).decode()
+    return aesgcm.decrypt(
+        bytes.fromhex(nonce_hex), bytes.fromhex(ct_hex), None
+    ).decode()
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -125,7 +127,9 @@ async def create_custom_feed(
     db.add(feed)
     await db.flush()
 
-    actor_ip = http_request.client.host if http_request and http_request.client else None
+    actor_ip = (
+        http_request.client.host if http_request and http_request.client else None
+    )
     await audit_emit(
         db,
         actor_id=role.value,
@@ -161,12 +165,16 @@ async def delete_custom_feed(
     result = await db.execute(select(CustomFeed).where(CustomFeed.id == feed_id))
     feed = result.scalar_one_or_none()
     if feed is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
+        )
 
     tenant_id = (
         getattr(http_request.state, "tenant_id", None) if http_request else "unknown"
     )
-    actor_ip = http_request.client.host if http_request and http_request.client else None
+    actor_ip = (
+        http_request.client.host if http_request and http_request.client else None
+    )
 
     await db.delete(feed)
     await db.flush()
@@ -195,7 +203,9 @@ async def update_custom_feed(
     result = await db.execute(select(CustomFeed).where(CustomFeed.id == feed_id))
     feed = result.scalar_one_or_none()
     if feed is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
+        )
 
     if body.enabled is not None:
         feed.enabled = body.enabled

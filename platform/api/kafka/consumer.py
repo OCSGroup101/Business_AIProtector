@@ -43,13 +43,17 @@ class KafkaConsumerService:
             self._consumer = AIOKafkaConsumer(
                 bootstrap_servers=KAFKA_BROKERS,
                 group_id=CONSUMER_GROUP,
-                value_deserializer=lambda v: json.loads(v.decode("utf-8", errors="replace")),
+                value_deserializer=lambda v: json.loads(
+                    v.decode("utf-8", errors="replace")
+                ),
                 auto_offset_reset="latest",
             )
             # Subscribe to all tenant telemetry topics via regex
             self._consumer.subscribe(pattern=TOPIC_PATTERN)
             await self._consumer.start()
-            self._task = asyncio.create_task(self._consume_loop(), name="kafka-consumer")
+            self._task = asyncio.create_task(
+                self._consume_loop(), name="kafka-consumer"
+            )
             logger.info("Kafka consumer started (group=%s)", CONSUMER_GROUP)
         except Exception as exc:
             logger.warning("Kafka consumer failed to start: %s", exc)

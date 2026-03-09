@@ -195,9 +195,7 @@ async def list_deployments(
     _role: Role = Depends(require_permission(Permission.AGENTS_READ)),
 ) -> list[DeploymentResponse]:
     """List all deployments."""
-    result = await db.execute(
-        select(Deployment).order_by(Deployment.created_at.desc())
-    )
+    result = await db.execute(select(Deployment).order_by(Deployment.created_at.desc()))
     return [_to_response(d) for d in result.scalars()]
 
 
@@ -208,9 +206,7 @@ async def get_deployment(
     _role: Role = Depends(require_permission(Permission.AGENTS_READ)),
 ) -> DeploymentStatusResponse:
     """Get deployment status including enrolled vs updated agent counts."""
-    result = await db.execute(
-        select(Deployment).where(Deployment.id == deployment_id)
-    )
+    result = await db.execute(select(Deployment).where(Deployment.id == deployment_id))
     dep = result.scalar_one_or_none()
     if dep is None:
         raise HTTPException(
@@ -249,9 +245,7 @@ async def pause_deployment(
     role: Role = Depends(require_permission(Permission.AGENTS_WRITE)),
 ) -> DeploymentResponse:
     """Pause a rolling-out deployment."""
-    result = await db.execute(
-        select(Deployment).where(Deployment.id == deployment_id)
-    )
+    result = await db.execute(select(Deployment).where(Deployment.id == deployment_id))
     dep = result.scalar_one_or_none()
     if dep is None:
         raise HTTPException(
@@ -293,9 +287,7 @@ async def resume_deployment(
     role: Role = Depends(require_permission(Permission.AGENTS_WRITE)),
 ) -> DeploymentResponse:
     """Resume a paused deployment."""
-    result = await db.execute(
-        select(Deployment).where(Deployment.id == deployment_id)
-    )
+    result = await db.execute(select(Deployment).where(Deployment.id == deployment_id))
     dep = result.scalar_one_or_none()
     if dep is None:
         raise HTTPException(
@@ -342,9 +334,7 @@ async def rollback_deployment(
     Trigger a rollback.  Sets status=rolled_back.
     Agents receive a rollback command via the next heartbeat response.
     """
-    result = await db.execute(
-        select(Deployment).where(Deployment.id == deployment_id)
-    )
+    result = await db.execute(select(Deployment).where(Deployment.id == deployment_id))
     dep = result.scalar_one_or_none()
     if dep is None:
         raise HTTPException(

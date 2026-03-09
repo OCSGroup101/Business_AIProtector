@@ -35,6 +35,7 @@ DETECTION_LATENCY_BUDGET_SECS = 30
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _agent_headers(agent_id: str) -> dict:
     """Headers used by an agent when posting telemetry."""
     return {
@@ -52,7 +53,9 @@ def _api_headers() -> dict:
     }
 
 
-def _telemetry_event(agent_id: str, rule_id: str, rule_name: str, severity: str) -> bytes:
+def _telemetry_event(
+    agent_id: str, rule_id: str, rule_name: str, severity: str
+) -> bytes:
     """Build a single-event NDJSON telemetry batch containing one detection hit."""
     event = {
         "event_id": str(uuid.uuid4()),
@@ -82,9 +85,12 @@ def _telemetry_event(agent_id: str, rule_id: str, rule_name: str, severity: str)
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def api_client():
-    with httpx.Client(base_url=PLATFORM_URL, headers=_api_headers(), timeout=15) as client:
+    with httpx.Client(
+        base_url=PLATFORM_URL, headers=_api_headers(), timeout=15
+    ) as client:
         yield client
 
 
@@ -97,6 +103,7 @@ def agent_id():
 # ---------------------------------------------------------------------------
 # Connectivity pre-check
 # ---------------------------------------------------------------------------
+
 
 class TestPlatformReachable:
     def test_health_ready(self, api_client):
@@ -112,6 +119,7 @@ class TestPlatformReachable:
 # ---------------------------------------------------------------------------
 # Core pipeline
 # ---------------------------------------------------------------------------
+
 
 class TestDetectionPipeline:
     """Full path: telemetry upload → incident created → readable via API."""
@@ -186,7 +194,9 @@ class TestDetectionPipeline:
     def test_duplicate_upload_deduplicates(self, api_client, agent_id):
         """Uploading the same detection within 24h must not create a second incident."""
         rule_id = TestDetectionPipeline._rule_id
-        body = _telemetry_event(agent_id, rule_id, TestDetectionPipeline._rule_name, "HIGH")
+        body = _telemetry_event(
+            agent_id, rule_id, TestDetectionPipeline._rule_name, "HIGH"
+        )
 
         r = api_client.post(
             "/api/v1/telemetry/batch",
@@ -210,6 +220,7 @@ class TestDetectionPipeline:
 # Severity escalation
 # ---------------------------------------------------------------------------
 
+
 class TestSeverityEscalation:
     """A follow-up detection with higher severity should escalate the incident."""
 
@@ -225,8 +236,12 @@ class TestSeverityEscalation:
         r1 = api_client.post(
             "/api/v1/telemetry/batch",
             content=body_med,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r1.status_code == 202
         assert r1.json()["incidents_created"] == 1
@@ -236,11 +251,17 @@ class TestSeverityEscalation:
         r2 = api_client.post(
             "/api/v1/telemetry/batch",
             content=body_crit,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r2.status_code == 202
-        assert r2.json()["incidents_created"] == 0, "Second hit should dedup, not create new"
+        assert r2.json()["incidents_created"] == 0, (
+            "Second hit should dedup, not create new"
+        )
 
         # Verify escalation
         incidents = api_client.get(
@@ -255,6 +276,7 @@ class TestSeverityEscalation:
 # ---------------------------------------------------------------------------
 # Latency measurement
 # ---------------------------------------------------------------------------
+
 
 class TestDetectionLatency:
     """Verify the <30s detection latency target end-to-end."""
@@ -276,8 +298,12 @@ class TestDetectionLatency:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
 
@@ -306,6 +332,7 @@ class TestDetectionLatency:
 # Incident status transitions
 # ---------------------------------------------------------------------------
 
+
 class TestIncidentWorkflow:
     """Verify status transitions: OPEN → INVESTIGATING → RESOLVED."""
 
@@ -317,8 +344,12 @@ class TestIncidentWorkflow:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         incident_id = api_client.get(
@@ -350,8 +381,12 @@ class TestIncidentWorkflow:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         incident_id = api_client.get(
@@ -369,6 +404,7 @@ class TestIncidentWorkflow:
 # Resolve / assign lifecycle (Phase 2)
 # ---------------------------------------------------------------------------
 
+
 class TestIncidentResolveAndAssign:
     """Verify the resolve and assign endpoints introduced in Phase 2."""
 
@@ -381,8 +417,12 @@ class TestIncidentResolveAndAssign:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         incident_id = api_client.get(
@@ -390,7 +430,9 @@ class TestIncidentResolveAndAssign:
         ).json()[0]["id"]
 
         # Transition to INVESTIGATING first (resolve requires this)
-        api_client.patch(f"/api/v1/incidents/{incident_id}", json={"status": "INVESTIGATING"})
+        api_client.patch(
+            f"/api/v1/incidents/{incident_id}", json={"status": "INVESTIGATING"}
+        )
 
         # Resolve with notes
         r2 = api_client.post(
@@ -400,7 +442,9 @@ class TestIncidentResolveAndAssign:
         assert r2.status_code == 200, f"Resolve failed: {r2.status_code} {r2.text}"
         data = r2.json()
         assert data["status"] == "RESOLVED", f"Expected RESOLVED, got {data['status']}"
-        assert data.get("resolved_at") is not None, "resolved_at must be set after resolve"
+        assert data.get("resolved_at") is not None, (
+            "resolved_at must be set after resolve"
+        )
 
     def test_assign_sets_assigned_to(self, api_client):
         """POST /assign must set assigned_to on the incident."""
@@ -411,8 +455,12 @@ class TestIncidentResolveAndAssign:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         incident_id = api_client.get(
@@ -438,8 +486,12 @@ class TestIncidentResolveAndAssign:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id, "X-Tenant-ID": TENANT_ID,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         incident_id = api_client.get(
@@ -457,14 +509,19 @@ class TestIncidentResolveAndAssign:
 # Edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestTelemetryEdgeCases:
     def test_empty_batch_accepted(self, api_client):
         """Empty body returns 202 with zeros (no crash)."""
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=b"",
-            headers={**_api_headers(), "X-Agent-ID": "e2e-empty",
-                     "X-Tenant-ID": TENANT_ID, "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": "e2e-empty",
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         data = r.json()
@@ -489,8 +546,12 @@ class TestTelemetryEdgeCases:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id,
-                     "X-Tenant-ID": TENANT_ID, "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         assert r.json()["incidents_created"] == 0
@@ -501,8 +562,12 @@ class TestTelemetryEdgeCases:
         r = api_client.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": "e2e-malformed",
-                     "X-Tenant-ID": TENANT_ID, "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": "e2e-malformed",
+                "X-Tenant-ID": TENANT_ID,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
         data = r.json()

@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, status
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +24,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Report TTL — pre-signed URLs and stored objects expire after this many seconds
-_REPORT_EXPIRY_SECS = int(os.environ.get("REPORT_EXPIRY_SECS", str(7 * 86_400)))  # 7 days
+_REPORT_EXPIRY_SECS = int(
+    os.environ.get("REPORT_EXPIRY_SECS", str(7 * 86_400))
+)  # 7 days
 
 
 # ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -61,7 +62,10 @@ async def _store_report(report_id: str, data: bytes, content_type: str) -> str:
     key = f"reports/{report_id}.pdf"
 
     if not minio_url:
-        logger.warning("MINIO_URL not configured — report %s not stored in object storage", report_id)
+        logger.warning(
+            "MINIO_URL not configured — report %s not stored in object storage",
+            report_id,
+        )
         return key
 
     try:
@@ -70,7 +74,9 @@ async def _store_report(report_id: str, data: bytes, content_type: str) -> str:
 
         endpoint = minio_url.replace("http://", "").replace("https://", "").rstrip("/")
         secure = minio_url.startswith("https://")
-        client = Minio(endpoint, access_key=minio_access, secret_key=minio_secret, secure=secure)
+        client = Minio(
+            endpoint, access_key=minio_access, secret_key=minio_secret, secure=secure
+        )
 
         if not client.bucket_exists(bucket):
             client.make_bucket(bucket)
@@ -105,7 +111,9 @@ def _presigned_url(storage_key: str) -> Optional[str]:
 
         endpoint = minio_url.replace("http://", "").replace("https://", "").rstrip("/")
         secure = minio_url.startswith("https://")
-        client = Minio(endpoint, access_key=minio_access, secret_key=minio_secret, secure=secure)
+        client = Minio(
+            endpoint, access_key=minio_access, secret_key=minio_secret, secure=secure
+        )
         url = client.presigned_get_object(
             bucket,
             storage_key,
@@ -213,7 +221,9 @@ async def generate_report(
 
     await db.flush()
 
-    download_url = _presigned_url(report_row.storage_key) if report_row.storage_key else None
+    download_url = (
+        _presigned_url(report_row.storage_key) if report_row.storage_key else None
+    )
 
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None

@@ -6,8 +6,6 @@ The Anthropic client is mocked so these tests run without an API key.
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -29,32 +27,36 @@ def _make_mock_message(text: str, stop_reason: str = "end_turn") -> MagicMock:
     return msg
 
 
-MOCK_CORRELATION_JSON = json.dumps({
-    "incidents_analyzed": 3,
-    "overall_threat_level": "HIGH",
-    "summary": "Three incidents suggest a persistence chain on host-001.",
-    "insights": [
-        {
-            "pattern_type": "persistence_chain",
-            "affected_agents": ["host-001"],
-            "incident_ids": ["inc_001", "inc_002"],
-            "mitre_techniques": ["T1547.001", "T1059.001"],
-            "confidence": 0.85,
-            "narrative": "Registry Run key added followed by PowerShell execution.",
-            "recommended_actions": ["Isolate host-001", "Examine registry changes"],
-            "kill_chain_stage": "persistence",
-        }
-    ],
-})
+MOCK_CORRELATION_JSON = json.dumps(
+    {
+        "incidents_analyzed": 3,
+        "overall_threat_level": "HIGH",
+        "summary": "Three incidents suggest a persistence chain on host-001.",
+        "insights": [
+            {
+                "pattern_type": "persistence_chain",
+                "affected_agents": ["host-001"],
+                "incident_ids": ["inc_001", "inc_002"],
+                "mitre_techniques": ["T1547.001", "T1059.001"],
+                "confidence": 0.85,
+                "narrative": "Registry Run key added followed by PowerShell execution.",
+                "recommended_actions": ["Isolate host-001", "Examine registry changes"],
+                "kill_chain_stage": "persistence",
+            }
+        ],
+    }
+)
 
-MOCK_HUNTING_JSON = json.dumps({
-    "event_type": "ProcessCreate",
-    "filters": {"severity": "CRITICAL"},
-    "time_range_hours": 24,
-    "limit": 50,
-    "explanation": "Find all critical incidents in the last 24 hours.",
-    "natural_language": "Show CRITICAL incidents from the last day",
-})
+MOCK_HUNTING_JSON = json.dumps(
+    {
+        "event_type": "ProcessCreate",
+        "filters": {"severity": "CRITICAL"},
+        "time_range_hours": 24,
+        "limit": 50,
+        "explanation": "Find all critical incidents in the last 24 hours.",
+        "natural_language": "Show CRITICAL incidents from the last day",
+    }
+)
 
 
 # ─── Correlation Tests ─────────────────────────────────────────────────────────
@@ -176,7 +178,9 @@ class TestCoverageHeatmap:
 
 class TestFeedback:
     @pytest.mark.asyncio
-    async def test_feedback_404_unknown_incident(self, async_client: AsyncClient) -> None:
+    async def test_feedback_404_unknown_incident(
+        self, async_client: AsyncClient
+    ) -> None:
         """POST /api/v1/incidents/feedback returns 404 for unknown incident."""
         response = await async_client.post(
             "/api/v1/incidents/feedback",

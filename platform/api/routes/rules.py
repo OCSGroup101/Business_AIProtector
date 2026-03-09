@@ -80,6 +80,7 @@ class RuleDetail(BaseModel):
 
 # ─── Validation helpers ───────────────────────────────────────────────────────
 
+
 def _validate_rule_toml(content: str) -> list[dict[str, str]]:
     """Parse TOML and run RDK-style validation. Returns list of error dicts."""
     errors: list[dict[str, str]] = []
@@ -107,42 +108,71 @@ def _validate_rule_toml(content: str) -> list[dict[str, str]]:
         response = rule.get("response", {})
         severity = response.get("severity", "")
         if severity not in VALID_SEVERITIES:
-            errors.append({
-                "rule_id": rid,
-                "message": f"Invalid severity '{severity}'. Must be one of {sorted(VALID_SEVERITIES)}",
-            })
+            errors.append(
+                {
+                    "rule_id": rid,
+                    "message": f"Invalid severity '{severity}'. Must be one of {sorted(VALID_SEVERITIES)}",
+                }
+            )
 
         mitre = rule.get("mitre", {})
         for tech in mitre.get("techniques", []):
             if not MITRE_RE.match(tech):
-                errors.append({
-                    "rule_id": rid,
-                    "message": f"Invalid MITRE technique '{tech}'. Expected format T1234 or T1234.001",
-                })
+                errors.append(
+                    {
+                        "rule_id": rid,
+                        "message": f"Invalid MITRE technique '{tech}'. Expected format T1234 or T1234.001",
+                    }
+                )
 
         match = rule.get("match", {})
         match_type = match.get("type", "")
-        if match_type not in {"ioc", "behavioral", "heuristic", "sequence", "threshold"}:
-            errors.append({
-                "rule_id": rid,
-                "message": f"Invalid match type '{match_type}'",
-            })
+        if match_type not in {
+            "ioc",
+            "behavioral",
+            "heuristic",
+            "sequence",
+            "threshold",
+        }:
+            errors.append(
+                {
+                    "rule_id": rid,
+                    "message": f"Invalid match type '{match_type}'",
+                }
+            )
 
         if match_type == "heuristic" and not match.get("lua_script", "").strip():
-            errors.append({
-                "rule_id": rid,
-                "message": "Heuristic rule requires non-empty 'lua_script' in match block",
-            })
+            errors.append(
+                {
+                    "rule_id": rid,
+                    "message": "Heuristic rule requires non-empty 'lua_script' in match block",
+                }
+            )
 
         if match_type == "threshold":
             if not match.get("threshold"):
-                errors.append({"rule_id": rid, "message": "Threshold rule requires 'threshold' field"})
+                errors.append(
+                    {
+                        "rule_id": rid,
+                        "message": "Threshold rule requires 'threshold' field",
+                    }
+                )
             if not match.get("window_seconds"):
-                errors.append({"rule_id": rid, "message": "Threshold rule requires 'window_seconds' field"})
+                errors.append(
+                    {
+                        "rule_id": rid,
+                        "message": "Threshold rule requires 'window_seconds' field",
+                    }
+                )
 
         if match_type == "sequence":
             if not match.get("sequence"):
-                errors.append({"rule_id": rid, "message": "Sequence rule requires 'sequence' steps list"})
+                errors.append(
+                    {
+                        "rule_id": rid,
+                        "message": "Sequence rule requires 'sequence' steps list",
+                    }
+                )
 
     return errors
 
@@ -190,6 +220,7 @@ def _run_behavioral_match(rule: dict, event: dict) -> bool:
                 return False
         elif operator == "regex":
             import re as _re
+
             if not any(_re.search(v, val_str) for v in values):
                 return False
 
@@ -197,6 +228,7 @@ def _run_behavioral_match(rule: dict, event: dict) -> bool:
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
+
 
 @router.post("/validate", response_model=ValidationResult)
 async def validate_rule(
@@ -236,11 +268,13 @@ async def test_rule(
                 if _run_behavioral_match(rule, event):
                     matched.append(idx)
 
-        results.append(TestResult(
-            rule_id=rule.get("id", "unknown"),
-            total_events=len(body.events),
-            matched_indices=matched,
-        ))
+        results.append(
+            TestResult(
+                rule_id=rule.get("id", "unknown"),
+                total_events=len(body.events),
+                matched_indices=matched,
+            )
+        )
 
     return results
 
@@ -251,7 +285,7 @@ async def list_rules(
     _role=Depends(require_permission(Permission.POLICIES_READ)),
 ) -> list[RuleSummary]:
     """List all rules stored as policy entries for this tenant."""
-    from sqlalchemy import select, text
+    from sqlalchemy import text
 
     try:
         result = await db.execute(
@@ -270,13 +304,15 @@ async def list_rules(
         for rule in data.get("rules", []):
             match = rule.get("match", {})
             response = rule.get("response", {})
-            summaries.append(RuleSummary(
-                id=rule.get("id", row.id),
-                name=rule.get("name", "Unnamed"),
-                match_type=match.get("type", "behavioral"),
-                severity=response.get("severity", "INFO"),
-                enabled=rule.get("enabled", True),
-            ))
+            summaries.append(
+                RuleSummary(
+                    id=rule.get("id", row.id),
+                    name=rule.get("name", "Unnamed"),
+                    match_type=match.get("type", "behavioral"),
+                    severity=response.get("severity", "INFO"),
+                    enabled=rule.get("enabled", True),
+                )
+            )
 
     return summaries
 
@@ -321,8 +357,12 @@ async def create_rule(
             INSERT INTO policies (id, name, content_toml, created_at, updated_at)
             VALUES (:id, :name, :toml, :now, :now)
         """),
-        {"id": policy_id, "name": first_rule.get("name", rule_id),
-         "toml": body.content_toml, "now": now},
+        {
+            "id": policy_id,
+            "name": first_rule.get("name", rule_id),
+            "toml": body.content_toml,
+            "now": now,
+        },
     )
     await db.commit()
 

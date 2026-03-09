@@ -8,7 +8,6 @@ GET  /api/v1/intel/community/feed    — returns a STIX bundle (tenant_id stripp
 Rate limit: Redis sliding window — max 10 submissions per tenant per hour.
 """
 
-import json
 import logging
 import os
 from datetime import datetime, timezone
@@ -53,7 +52,9 @@ class CommunityIocResponse(BaseModel):
     created_at: datetime
 
 
-@router.post("/submit", response_model=CommunityIocResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/submit", response_model=CommunityIocResponse, status_code=status.HTTP_201_CREATED
+)
 async def submit_community_ioc(
     body: CommunityIocSubmit = Body(...),
     http_request: Request = None,  # type: ignore[assignment]
@@ -96,7 +97,9 @@ async def submit_community_ioc(
     db.add(ioc)
     await db.flush()
 
-    actor_ip = http_request.client.host if http_request and http_request.client else None
+    actor_ip = (
+        http_request.client.host if http_request and http_request.client else None
+    )
     await audit_emit(
         db,
         actor_id=role.value,

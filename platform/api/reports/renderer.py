@@ -101,11 +101,11 @@ def _html_incident_rows(incidents: list[dict[str, Any]]) -> str:
             first_seen = first_seen.isoformat()
         rows.append(
             f"<tr><td>{i}</td>"
-            f"<td>{inc.get('id','')}</td>"
-            f"<td>{inc.get('severity','')}</td>"
-            f"<td>{inc.get('status','')}</td>"
-            f"<td>{inc.get('rule_name','')}</td>"
-            f"<td>{inc.get('hostname','')}</td>"
+            f"<td>{inc.get('id', '')}</td>"
+            f"<td>{inc.get('severity', '')}</td>"
+            f"<td>{inc.get('status', '')}</td>"
+            f"<td>{inc.get('rule_name', '')}</td>"
+            f"<td>{inc.get('hostname', '')}</td>"
             f"<td>{first_seen}</td></tr>"
         )
     return "\n".join(rows)
@@ -132,7 +132,9 @@ def _render_pdf_with_reportlab(html: str) -> bytes:
         from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer  # type: ignore[import-untyped]
         from reportlab.lib.units import cm  # type: ignore[import-untyped]
     except ImportError:
-        logger.warning("reportlab not installed — returning HTML bytes with PDF MIME type stub")
+        logger.warning(
+            "reportlab not installed — returning HTML bytes with PDF MIME type stub"
+        )
         return html.encode("utf-8")
 
     buf = io.BytesIO()
@@ -142,6 +144,7 @@ def _render_pdf_with_reportlab(html: str) -> bytes:
 
     # Strip HTML tags for plain-text PDF rendering
     import re
+
     text = re.sub(r"<[^>]+>", " ", html)
     text = re.sub(r"\s+", " ", text).strip()
 

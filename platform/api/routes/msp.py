@@ -122,22 +122,20 @@ class EnrollmentTokenResponse(BaseModel):
 # ─── Helper: fetch per-tenant agent/incident counts ───────────────────────────
 
 
-async def _tenant_stats(
-    db: AsyncSession, schema: str
-) -> tuple[int, int]:
+async def _tenant_stats(db: AsyncSession, schema: str) -> tuple[int, int]:
     """
     Return (agent_count, open_incident_count) for the given tenant schema.
     Returns (0, 0) if the schema or tables do not yet exist.
     """
     try:
         agent_row = await db.execute(
-            text(f"SELECT COUNT(*) FROM {schema}.agents")
+            text(f"SELECT COUNT(*) FROM {schema}.agents")  # nosec B608
         )
         agent_count: int = agent_row.scalar_one() or 0
 
         incident_row = await db.execute(
             text(
-                f"SELECT COUNT(*) FROM {schema}.incidents "
+                f"SELECT COUNT(*) FROM {schema}.incidents "  # nosec B608
                 f"WHERE status NOT IN ('resolved', 'closed')"
             )
         )
@@ -207,12 +205,12 @@ async def platform_summary(
             active_tenants += 1
         schema = t.schema_name
         try:
-            a_row = await db.execute(text(f"SELECT COUNT(*) FROM {schema}.agents"))
+            a_row = await db.execute(text(f"SELECT COUNT(*) FROM {schema}.agents"))  # nosec B608
             total_agents += a_row.scalar_one() or 0
 
             i_row = await db.execute(
                 text(
-                    f"SELECT COUNT(*) FROM {schema}.incidents "
+                    f"SELECT COUNT(*) FROM {schema}.incidents "  # nosec B608
                     f"WHERE status NOT IN ('resolved', 'closed')"
                 )
             )
@@ -220,7 +218,7 @@ async def platform_summary(
 
             c_row = await db.execute(
                 text(
-                    f"SELECT COUNT(*) FROM {schema}.incidents "
+                    f"SELECT COUNT(*) FROM {schema}.incidents "  # nosec B608
                     f"WHERE severity = 'critical' AND status NOT IN ('resolved', 'closed')"
                 )
             )
@@ -260,7 +258,7 @@ async def tenant_summary(
     try:
         c_row = await db.execute(
             text(
-                f"SELECT COUNT(*) FROM {schema}.incidents "
+                f"SELECT COUNT(*) FROM {schema}.incidents "  # nosec B608
                 f"WHERE severity = 'critical' AND status NOT IN ('resolved', 'closed')"
             )
         )

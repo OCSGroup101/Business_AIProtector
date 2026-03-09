@@ -24,7 +24,9 @@ def upgrade() -> None:
         sa.Column("ioc_type", sa.String(32), nullable=False),
         sa.Column("value", sa.String(2048), nullable=False),
         sa.Column("score", sa.Float, nullable=False, default=0.5),
-        sa.Column("verification_status", sa.String(16), nullable=False, default="pending"),
+        sa.Column(
+            "verification_status", sa.String(16), nullable=False, default="pending"
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

@@ -191,7 +191,9 @@ async def create_policy(
     db.add(policy)
     await db.flush()
 
-    actor_ip = http_request.client.host if http_request and http_request.client else None
+    actor_ip = (
+        http_request.client.host if http_request and http_request.client else None
+    )
     await audit_emit(
         db,
         actor_id=role.value,

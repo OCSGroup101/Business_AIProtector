@@ -22,12 +22,11 @@ Environment:
 """
 
 import base64
-import hashlib
 import json
 import os
 import subprocess
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import httpx
 import pytest
@@ -47,6 +46,7 @@ TENANT_B = "isolation_tenant_b"
 # JWT crafting helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_jwt(tenant_id: str, roles: list[str] | None = None) -> str:
     """
     Craft a structurally valid JWT with the given claims.
@@ -57,18 +57,22 @@ def _make_jwt(tenant_id: str, roles: list[str] | None = None) -> str:
     """
     if roles is None:
         roles = ["tenant_admin"]
-    header = base64.urlsafe_b64encode(
-        json.dumps({"alg": "RS256", "typ": "JWT"}).encode()
-    ).rstrip(b"=").decode()
+    header = (
+        base64.urlsafe_b64encode(json.dumps({"alg": "RS256", "typ": "JWT"}).encode())
+        .rstrip(b"=")
+        .decode()
+    )
     payload_dict = {
         "tenant_id": tenant_id,
         "realm_access": {"roles": roles},
         "sub": f"e2e-user-{tenant_id}",
         "preferred_username": f"e2e_{tenant_id}",
     }
-    payload = base64.urlsafe_b64encode(
-        json.dumps(payload_dict).encode()
-    ).rstrip(b"=").decode()
+    payload = (
+        base64.urlsafe_b64encode(json.dumps(payload_dict).encode())
+        .rstrip(b"=")
+        .decode()
+    )
     # Signature not verified in dev mode — use a placeholder
     return f"{header}.{payload}.e2e_test_signature"
 
@@ -90,10 +94,13 @@ def _explicit_headers(tenant_id: str) -> dict:
 # DB helpers
 # ---------------------------------------------------------------------------
 
+
 def _psql(sql: str) -> str:
     result = subprocess.run(
         ["docker", "exec", PG_CONTAINER, "psql", "-U", PG_USER, "-d", PG_DB, "-c", sql],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     if result.returncode != 0:
         raise RuntimeError(f"psql failed: {result.stderr}")
@@ -165,6 +172,7 @@ def _delete_incident(incident_id: str, tenant_id: str) -> None:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def tenant_a_incident_id():
@@ -239,6 +247,7 @@ def client_security():
 # Pre-check
 # ---------------------------------------------------------------------------
 
+
 class TestIsolationPreCheck:
     def test_platform_ready(self):
         r = httpx.get(f"{PLATFORM_URL}/health/ready", timeout=5)
@@ -254,6 +263,7 @@ class TestIsolationPreCheck:
 # Cross-tenant incident isolation
 # ---------------------------------------------------------------------------
 
+
 class TestCrossTenantIncidentIsolation:
     """Tenant B must never see Tenant A's incidents."""
 
@@ -266,7 +276,9 @@ class TestCrossTenantIncidentIsolation:
             f"Tenant A cannot see its own incident {tenant_a_incident_id}"
         )
 
-    def test_tenant_b_cannot_read_tenant_a_incident_by_id(self, client_b, tenant_a_incident_id):
+    def test_tenant_b_cannot_read_tenant_a_incident_by_id(
+        self, client_b, tenant_a_incident_id
+    ):
         """
         CRITICAL: Tenant B must get 404 (not 200) for Tenant A's incident ID.
         A 200 response here is a data isolation breach.
@@ -282,17 +294,21 @@ class TestCrossTenantIncidentIsolation:
                 f"CRITICAL: Tenant B received Tenant A's incident data: {r.text[:200]}"
             )
 
-    def test_tenant_b_incident_list_excludes_tenant_a(self, client_b, tenant_a_incident_id):
+    def test_tenant_b_incident_list_excludes_tenant_a(
+        self, client_b, tenant_a_incident_id
+    ):
         """Tenant B's incident list must not contain Tenant A's incidents."""
         r = client_b.get("/api/v1/incidents")
         assert r.status_code in (200, 403), f"Unexpected status: {r.status_code}"
         if r.status_code == 200:
             ids = [i["id"] for i in r.json()]
             assert tenant_a_incident_id not in ids, (
-                f"CRITICAL: Tenant A's incident appeared in Tenant B's list!"
+                "CRITICAL: Tenant A's incident appeared in Tenant B's list!"
             )
 
-    def test_tenant_b_cannot_modify_tenant_a_incident(self, client_b, tenant_a_incident_id):
+    def test_tenant_b_cannot_modify_tenant_a_incident(
+        self, client_b, tenant_a_incident_id
+    ):
         """Tenant B PATCH on Tenant A's incident must return 403 or 404."""
         r = client_b.patch(
             f"/api/v1/incidents/{tenant_a_incident_id}",
@@ -306,6 +322,7 @@ class TestCrossTenantIncidentIsolation:
 # ---------------------------------------------------------------------------
 # Telemetry partitioning
 # ---------------------------------------------------------------------------
+
 
 class TestTelemetryPartitioning:
     """Telemetry is scoped to the submitting tenant — cross-tenant agent spoofing rejected."""
@@ -329,7 +346,10 @@ class TestTelemetryPartitioning:
         r = client_a.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_explicit_headers(TENANT_A), "Content-Type": "application/x-ndjson"},
+            headers={
+                **_explicit_headers(TENANT_A),
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202, f"Telemetry rejected: {r.status_code} {r.text}"
 
@@ -339,7 +359,10 @@ class TestTelemetryPartitioning:
         r = client_b.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_explicit_headers(TENANT_B), "Content-Type": "application/x-ndjson"},
+            headers={
+                **_explicit_headers(TENANT_B),
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
 
@@ -382,6 +405,7 @@ class TestTelemetryPartitioning:
 # JWT claim extraction (no explicit X-Tenant-ID)
 # ---------------------------------------------------------------------------
 
+
 class TestJwtTenantExtraction:
     """
     TenantMiddleware must extract tenant_id from JWT payload when no X-Tenant-ID
@@ -396,10 +420,12 @@ class TestJwtTenantExtraction:
             headers=_jwt_headers(TENANT_A),
             timeout=10,
         )
-        assert r.status_code == 200, f"JWT-based request failed: {r.status_code} {r.text}"
+        assert r.status_code == 200, (
+            f"JWT-based request failed: {r.status_code} {r.text}"
+        )
         ids = [i["id"] for i in r.json()]
         assert tenant_a_incident_id in ids, (
-            f"JWT tenant claim not applied: Tenant A incident missing from list"
+            "JWT tenant claim not applied: Tenant A incident missing from list"
         )
 
     def test_jwt_tenant_b_cannot_see_tenant_a_incident(self, tenant_a_incident_id):
@@ -419,10 +445,23 @@ class TestJwtTenantExtraction:
         This validates the middleware fallback path.
         """
         # JWT with no tenant_id claim
-        header = base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}').rstrip(b"=").decode()
-        payload = base64.urlsafe_b64encode(
-            json.dumps({"sub": "no-tenant-user", "realm_access": {"roles": ["tenant_admin"]}}).encode()
-        ).rstrip(b"=").decode()
+        header = (
+            base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}')
+            .rstrip(b"=")
+            .decode()
+        )
+        payload = (
+            base64.urlsafe_b64encode(
+                json.dumps(
+                    {
+                        "sub": "no-tenant-user",
+                        "realm_access": {"roles": ["tenant_admin"]},
+                    }
+                ).encode()
+            )
+            .rstrip(b"=")
+            .decode()
+        )
         bare_jwt = f"{header}.{payload}.sig"
 
         r = httpx.get(
@@ -439,6 +478,7 @@ class TestJwtTenantExtraction:
 # ---------------------------------------------------------------------------
 # RBAC enforcement
 # ---------------------------------------------------------------------------
+
 
 class TestRBACIsolation:
     """Role-based access control must be enforced regardless of tenant."""
@@ -504,7 +544,10 @@ class TestRBACIsolation:
         """SECURITY_ADMIN must be able to create policies (has policies:write)."""
         r = client_security.post(
             "/api/v1/policies",
-            json={"name": "Security Admin Policy", "content_toml": "[[rules]]\nid = \"test\"\n"},
+            json={
+                "name": "Security Admin Policy",
+                "content_toml": '[[rules]]\nid = "test"\n',
+            },
         )
         # 200/201 = created, 422 = validation error (content ok, schema issue) — both mean RBAC passed
         assert r.status_code in (200, 201, 422), (
@@ -514,15 +557,40 @@ class TestRBACIsolation:
     def test_all_four_dev_tokens_map_to_distinct_roles(self):
         """Verify each dev token produces the expected RBAC behaviour."""
         token_expectations = [
-            ("dev-admin-token", "/api/v1/policies", "POST", 200, 422),  # TENANT_ADMIN: write allowed
-            ("dev-security-token", "/api/v1/policies", "POST", 200, 422),  # SECURITY_ADMIN: write allowed
-            ("dev-helpdesk-token", "/api/v1/policies", "POST", 403, 403),  # HELPDESK: write denied
-            ("dev-auditor-token", "/api/v1/policies", "POST", 403, 403),  # AUDITOR: write denied
+            (
+                "dev-admin-token",
+                "/api/v1/policies",
+                "POST",
+                200,
+                422,
+            ),  # TENANT_ADMIN: write allowed
+            (
+                "dev-security-token",
+                "/api/v1/policies",
+                "POST",
+                200,
+                422,
+            ),  # SECURITY_ADMIN: write allowed
+            (
+                "dev-helpdesk-token",
+                "/api/v1/policies",
+                "POST",
+                403,
+                403,
+            ),  # HELPDESK: write denied
+            (
+                "dev-auditor-token",
+                "/api/v1/policies",
+                "POST",
+                403,
+                403,
+            ),  # AUDITOR: write denied
         ]
         for token, path, method, status_min, status_max in token_expectations:
             headers = {"Authorization": f"Bearer {token}", "X-Tenant-ID": TENANT_A}
             r = httpx.request(
-                method, f"{PLATFORM_URL}{path}",
+                method,
+                f"{PLATFORM_URL}{path}",
                 json={"name": "Token Role Test", "content_toml": "[[rules]]\n"},
                 headers=headers,
                 timeout=10,
@@ -536,6 +604,7 @@ class TestRBACIsolation:
 # ---------------------------------------------------------------------------
 # Schema-level isolation verification
 # ---------------------------------------------------------------------------
+
 
 class TestSchemaIsolation:
     """Direct DB verification that tenant data is in separate schemas."""

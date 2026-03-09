@@ -4,7 +4,7 @@
 import logging
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Request, status
 from pydantic import BaseModel

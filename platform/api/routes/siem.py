@@ -263,9 +263,7 @@ async def forward_incident(
             status_code=status.HTTP_404_NOT_FOUND, detail="Connector not found"
         )
 
-    inc_result = await db.execute(
-        select(Incident).where(Incident.id == incident_id)
-    )
+    inc_result = await db.execute(select(Incident).where(Incident.id == incident_id))
     incident = inc_result.scalar_one_or_none()
     if incident is None:
         raise HTTPException(

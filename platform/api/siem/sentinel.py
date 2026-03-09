@@ -17,8 +17,7 @@ from .base import SiemConnector
 logger = logging.getLogger(__name__)
 
 _LOG_ANALYTICS_URL = (
-    "https://{workspace_id}.ods.opinsights.azure.com"
-    "/api/logs?api-version=2016-04-01"
+    "https://{workspace_id}.ods.opinsights.azure.com/api/logs?api-version=2016-04-01"
 )
 
 

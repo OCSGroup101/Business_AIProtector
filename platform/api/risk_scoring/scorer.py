@@ -34,13 +34,12 @@ def _load_model() -> Optional[object]:
     model_path = Path(os.getenv("RISK_MODEL_PATH", "risk_model.pkl"))
 
     if not model_path.exists():
-        logger.info(
-            "Risk model not found at %s — using heuristic scorer", model_path
-        )
+        logger.info("Risk model not found at %s — using heuristic scorer", model_path)
         return None
 
     try:
         import joblib  # type: ignore[import-untyped]
+
         _model = joblib.load(model_path)
         logger.info("Loaded XGBoost risk model from %s", model_path)
         return _model
@@ -73,13 +72,7 @@ def _heuristic_score(features: dict[str, float]) -> float:
     spike = min(features.get("recency_spike", 0.0), 10.0)
     open_inc = min(features.get("open_incidents", 0.0), 10.0)
 
-    raw = (
-        inc7 * 0.30
-        + high * 1.0
-        + unique * 0.50
-        + spike * 1.5
-        + open_inc * 0.40
-    )
+    raw = inc7 * 0.30 + high * 1.0 + unique * 0.50 + spike * 1.5 + open_inc * 0.40
 
     # Normalize: cap at 30 for full score
     return min(raw / 30.0, 1.0)
@@ -104,11 +97,14 @@ def score_agent(features: dict[str, float]) -> tuple[float, str]:
     if model is not None:
         try:
             import numpy as np  # type: ignore[import-untyped]
+
             vec = np.array([_feature_vector(features)], dtype=float)
             prob = float(model.predict_proba(vec)[0][1])  # P(high_risk)
             return prob, _tier(prob)
         except Exception as exc:
-            logger.warning("XGBoost inference failed: %s — falling back to heuristic", exc)
+            logger.warning(
+                "XGBoost inference failed: %s — falling back to heuristic", exc
+            )
 
     score = _heuristic_score(features)
     return score, _tier(score)

@@ -103,7 +103,9 @@ async def run_correlation_agent(
         iteration += 1
         logger.info(
             "Correlation agent iteration %d/%d for tenant %s",
-            iteration, max_iterations, tenant_id,
+            iteration,
+            max_iterations,
+            tenant_id,
         )
 
         async with client.messages.stream(
@@ -129,7 +131,8 @@ async def run_correlation_agent(
 
         if response.stop_reason != "tool_use":
             logger.warning(
-                "Unexpected stop_reason '%s' from correlation agent", response.stop_reason
+                "Unexpected stop_reason '%s' from correlation agent",
+                response.stop_reason,
             )
             break
 
@@ -146,18 +149,21 @@ async def run_correlation_agent(
                 db=db,
                 tenant_id=tenant_id,
             )
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": json.dumps(result),
-            })
+            tool_results.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": json.dumps(result),
+                }
+            )
 
         messages.append({"role": "user", "content": tool_results})
 
     else:
         logger.warning(
             "Correlation agent hit max_iterations=%d for tenant %s",
-            max_iterations, tenant_id,
+            max_iterations,
+            tenant_id,
         )
 
     # Parse the JSON report from the final text block
@@ -177,7 +183,9 @@ def _parse_result(text: str, tenant_id: str) -> CorrelationResult:
     try:
         data = json.loads(cleaned)
     except json.JSONDecodeError as exc:
-        logger.error("Failed to parse correlation agent output: %s\n%s", exc, text[:500])
+        logger.error(
+            "Failed to parse correlation agent output: %s\n%s", exc, text[:500]
+        )
         return CorrelationResult(
             tenant_id=tenant_id,
             analyzed_at=now,

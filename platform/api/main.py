@@ -115,12 +115,18 @@ app.include_router(incidents.router, prefix="/api/v1/incidents", tags=["incident
 app.include_router(policies.router, prefix="/api/v1/policies", tags=["policies"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
 app.include_router(intel.router, prefix="/api/v1/intel", tags=["intelligence"])
-app.include_router(intel_feeds.router, prefix="/api/v1/intel/custom-feeds", tags=["intelligence"])
-app.include_router(community_ioc.router, prefix="/api/v1/intel/community", tags=["intelligence"])
+app.include_router(
+    intel_feeds.router, prefix="/api/v1/intel/custom-feeds", tags=["intelligence"]
+)
+app.include_router(
+    community_ioc.router, prefix="/api/v1/intel/community", tags=["intelligence"]
+)
 app.include_router(audit.router, prefix="/api/v1/audit", tags=["audit"])
 app.include_router(rules.router, prefix="/api/v1/rules", tags=["rules"])
 app.include_router(siem.router, prefix="/api/v1/siem", tags=["siem"])
-app.include_router(deployments.router, prefix="/api/v1/deployments", tags=["deployments"])
+app.include_router(
+    deployments.router, prefix="/api/v1/deployments", tags=["deployments"]
+)
 app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 app.include_router(msp.router, prefix="/api/v1/msp", tags=["msp"])
 app.include_router(correlation.router, prefix="/api/v1/correlation", tags=["ai"])

@@ -7,7 +7,7 @@ Authentication: Bearer token (api_key_encrypted decrypted at runtime).
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Optional
 
 import httpx

@@ -19,7 +19,9 @@ def upgrade() -> None:
     # Add false-positive feedback columns to incidents
     op.add_column(
         "incidents",
-        sa.Column("is_false_positive", sa.Boolean(), nullable=True, server_default=sa.false()),
+        sa.Column(
+            "is_false_positive", sa.Boolean(), nullable=True, server_default=sa.false()
+        ),
     )
     op.add_column(
         "incidents",

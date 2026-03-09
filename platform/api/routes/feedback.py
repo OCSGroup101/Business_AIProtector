@@ -10,9 +10,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..audit_service import emit as audit_emit
@@ -60,9 +60,7 @@ async def submit_feedback(
     tenant_id = getattr(request.state, "tenant_id", None) if request else None
     tenant_id = tenant_id or "dev_tenant"
 
-    result = await db.execute(
-        select(Incident).where(Incident.id == body.incident_id)
-    )
+    result = await db.execute(select(Incident).where(Incident.id == body.incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
         raise HTTPException(
@@ -89,9 +87,7 @@ async def submit_feedback(
         tenant_id=tenant_id,
     )
 
-    actor_ip = (
-        request.client.host if request and request.client else None
-    )
+    actor_ip = request.client.host if request and request.client else None
     await audit_emit(
         db,
         actor_id=role.value,
@@ -155,7 +151,9 @@ async def _check_and_adjust_sensitivity(
     if fp_rate > 0.50:
         logger.warning(
             "Rule %s has FP rate %.0f%% over last %d reviews — flagging for sensitivity adjustment",
-            rule_id, fp_rate * 100, len(reviewed),
+            rule_id,
+            fp_rate * 100,
+            len(reviewed),
         )
         # Future: update the rule's confidence_threshold in the policies/rules table.
         # For now we log the trigger and return True so callers can surface it.

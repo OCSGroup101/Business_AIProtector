@@ -4,7 +4,16 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    status,
+)
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -219,7 +228,9 @@ async def resolve_incident(
     result = await db.execute(select(Incident).where(Incident.id == incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
 
     incident.status = "RESOLVED"
     incident.resolved_at = datetime.now(tz=timezone.utc)
@@ -228,8 +239,14 @@ async def resolve_incident(
 
     await db.flush()
 
-    tenant_id = getattr(http_request.state, "tenant_id", "unknown") if http_request else "unknown"
-    actor_ip = http_request.client.host if http_request and http_request.client else None
+    tenant_id = (
+        getattr(http_request.state, "tenant_id", "unknown")
+        if http_request
+        else "unknown"
+    )
+    actor_ip = (
+        http_request.client.host if http_request and http_request.client else None
+    )
     await audit_emit(
         db,
         actor_id=role.value,
@@ -268,13 +285,21 @@ async def assign_incident(
     result = await db.execute(select(Incident).where(Incident.id == incident_id))
     incident = result.scalar_one_or_none()
     if incident is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
 
     incident.assigned_to = body.assigned_to
     await db.flush()
 
-    tenant_id = getattr(http_request.state, "tenant_id", "unknown") if http_request else "unknown"
-    actor_ip = http_request.client.host if http_request and http_request.client else None
+    tenant_id = (
+        getattr(http_request.state, "tenant_id", "unknown")
+        if http_request
+        else "unknown"
+    )
+    actor_ip = (
+        http_request.client.host if http_request and http_request.client else None
+    )
     await audit_emit(
         db,
         actor_id=role.value,
@@ -304,7 +329,9 @@ async def assign_incident(
 @router.get("/{incident_id}/timeline", response_model=TimelineResponse)
 async def get_incident_timeline(
     incident_id: str = Path(...),
-    cursor: Optional[str] = Query(None, description="ISO timestamp cursor for pagination"),
+    cursor: Optional[str] = Query(
+        None, description="ISO timestamp cursor for pagination"
+    ),
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(get_tenant_session),
     _role: Role = Depends(require_permission(Permission.INCIDENTS_READ)),
@@ -313,7 +340,9 @@ async def get_incident_timeline(
     # Verify incident exists
     inc_result = await db.execute(select(Incident).where(Incident.id == incident_id))
     if inc_result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found"
+        )
 
     query = (
         select(IncidentEvent)
@@ -322,8 +351,6 @@ async def get_incident_timeline(
         .limit(limit + 1)
     )
     if cursor:
-        from sqlalchemy import cast
-        from sqlalchemy.types import DateTime
         cursor_dt = datetime.fromisoformat(cursor)
         query = query.where(IncidentEvent.occurred_at > cursor_dt)
 
@@ -345,10 +372,11 @@ async def get_incident_timeline(
 
     # Count total
     from sqlalchemy import func
+
     count_result = await db.execute(
-        select(func.count()).select_from(IncidentEvent).where(
-            IncidentEvent.incident_id == incident_id
-        )
+        select(func.count())
+        .select_from(IncidentEvent)
+        .where(IncidentEvent.incident_id == incident_id)
     )
     total: int = count_result.scalar_one()
 

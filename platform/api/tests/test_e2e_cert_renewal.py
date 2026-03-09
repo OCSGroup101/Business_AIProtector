@@ -19,7 +19,6 @@ Environment variables:
 """
 
 import hashlib
-import json
 import os
 import subprocess
 import uuid
@@ -45,6 +44,7 @@ PG_DB = "openclaw"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _api_headers(tenant_id: str = TENANT_ID) -> dict:
     return {
         "Authorization": f"Bearer {ADMIN_TOKEN}",
@@ -55,7 +55,9 @@ def _api_headers(tenant_id: str = TENANT_ID) -> dict:
 def _psql(sql: str) -> str:
     result = subprocess.run(
         ["docker", "exec", PG_CONTAINER, "psql", "-U", PG_USER, "-d", PG_DB, "-c", sql],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     if result.returncode != 0:
         raise RuntimeError(f"psql failed: {result.stderr}")
@@ -67,10 +69,14 @@ def _generate_key_and_csr(common_name: str) -> tuple[str, str]:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     csr = (
         x509.CertificateSigningRequestBuilder()
-        .subject_name(x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "OpenClaw Agent"),
-        ]))
+        .subject_name(
+            x509.Name(
+                [
+                    x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "OpenClaw Agent"),
+                ]
+            )
+        )
         .sign(key, hashes.SHA256())
     )
     key_pem = key.private_bytes(
@@ -129,7 +135,9 @@ CREATE TABLE IF NOT EXISTS {schema}.agents (
 """)
 
 
-def _set_agent_cert_expires_at(agent_id: str, tenant_id: str, expires_at: datetime) -> None:
+def _set_agent_cert_expires_at(
+    agent_id: str, tenant_id: str, expires_at: datetime
+) -> None:
     """Directly update an agent's cert_expires_at for testing."""
     schema = f"tenant_{tenant_id.replace('-', '_')}"
     ts = expires_at.strftime("%Y-%m-%dT%H:%M:%S+00:00")
@@ -146,7 +154,7 @@ def _get_agent_cert_info(agent_id: str, tenant_id: str) -> dict:
     output = _psql(
         f"SELECT cert_serial, cert_expires_at FROM {schema}.agents WHERE id = '{agent_id}';"
     )
-    lines = [l.strip() for l in output.strip().splitlines() if l.strip()]
+    lines = [line.strip() for line in output.strip().splitlines() if line.strip()]
     # psql output: header | separator | data | rowcount
     if len(lines) < 3:
         return {}
@@ -160,6 +168,7 @@ def _get_agent_cert_info(agent_id: str, tenant_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def api():
@@ -212,6 +221,7 @@ def enrolled_agent(api):
 # Pre-check
 # ---------------------------------------------------------------------------
 
+
 class TestCertPreCheck:
     def test_platform_ready(self, api):
         r = api.get("/health/ready")
@@ -220,12 +230,14 @@ class TestCertPreCheck:
     def test_cryptography_available(self):
         """Verify cryptography lib is available for CSR generation."""
         from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: F401
+
         assert True
 
 
 # ---------------------------------------------------------------------------
 # Enrollment
 # ---------------------------------------------------------------------------
+
 
 class TestEnrollment:
     def test_enrollment_returns_cert(self, enrolled_agent):
@@ -252,7 +264,9 @@ class TestEnrollment:
             },
             headers={"X-Tenant-ID": TENANT_ID},
         )
-        assert r.status_code == 401, f"Expected 401 for invalid token, got {r.status_code}"
+        assert r.status_code == 401, (
+            f"Expected 401 for invalid token, got {r.status_code}"
+        )
 
     def test_enrolled_agent_cert_in_db(self, enrolled_agent):
         """Enrolled agent must have cert_serial and cert_expires_at in the DB."""
@@ -290,13 +304,16 @@ class TestEnrollment:
         )
         # Cleanup
         schema = f"tenant_{tenant_id.replace('-', '_')}"
-        _psql(f"UPDATE {schema}.agents SET is_active=false WHERE id='{data['agent_id']}';")
+        _psql(
+            f"UPDATE {schema}.agents SET is_active=false WHERE id='{data['agent_id']}';"
+        )
         _psql(f"DELETE FROM public.enrollment_tokens WHERE id='{token_id}';")
 
 
 # ---------------------------------------------------------------------------
 # Cert renewal
 # ---------------------------------------------------------------------------
+
 
 class TestCertRenewal:
     def test_renew_cert_returns_new_cert(self, api, enrolled_agent):
@@ -406,12 +423,15 @@ class TestCertRenewal:
             json={"csr_pem": csr_pem},
             headers=_api_headers(),
         )
-        assert r.status_code == 404, f"Expected 404 for unknown agent, got {r.status_code}"
+        assert r.status_code == 404, (
+            f"Expected 404 for unknown agent, got {r.status_code}"
+        )
 
 
 # ---------------------------------------------------------------------------
 # Heartbeat cert-expiry trigger
 # ---------------------------------------------------------------------------
+
 
 class TestHeartbeatCertExpiry:
     """Verify heartbeat queues renew_cert when cert is within 24h of expiry."""
@@ -464,7 +484,9 @@ class TestHeartbeatCertExpiry:
         healthy_expiry = datetime.now(tz=timezone.utc) + timedelta(hours=72)
         _set_agent_cert_expires_at(agent_id, tenant_id, healthy_expiry)
 
-    def test_heartbeat_queues_renewal_when_cert_already_expired(self, api, enrolled_agent):
+    def test_heartbeat_queues_renewal_when_cert_already_expired(
+        self, api, enrolled_agent
+    ):
         """Heartbeat MUST queue renew_cert even when cert is already past expiry."""
         agent_id, tenant_id, _ = enrolled_agent
 
@@ -486,6 +508,7 @@ class TestHeartbeatCertExpiry:
 # ---------------------------------------------------------------------------
 # Full renewal cycle
 # ---------------------------------------------------------------------------
+
 
 class TestFullRenewalCycle:
     """Simulate the complete agent cert lifecycle end-to-end."""
@@ -525,8 +548,7 @@ class TestFullRenewalCycle:
         try:
             # Step 2: expire cert to 10h remaining
             _set_agent_cert_expires_at(
-                agent_id, tenant_id,
-                datetime.now(tz=timezone.utc) + timedelta(hours=10)
+                agent_id, tenant_id, datetime.now(tz=timezone.utc) + timedelta(hours=10)
             )
 
             # Step 3: heartbeat → should see renew_cert
@@ -537,9 +559,12 @@ class TestFullRenewalCycle:
                     "agent_version": "0.1.0-e2e",
                     "state": "ACTIVE",
                     "policy_version": 0,
-                    "metrics": {"cpu_percent": 1.0, "ram_mb": 40,
-                                "ring_buffer_fill_pct": 0,
-                                "events_processed_since_last_heartbeat": 0},
+                    "metrics": {
+                        "cpu_percent": 1.0,
+                        "ram_mb": 40,
+                        "ring_buffer_fill_pct": 0,
+                        "events_processed_since_last_heartbeat": 0,
+                    },
                 },
                 headers=_api_headers(tenant_id),
             )
@@ -567,9 +592,12 @@ class TestFullRenewalCycle:
                     "agent_version": "0.1.0-e2e",
                     "state": "ACTIVE",
                     "policy_version": 0,
-                    "metrics": {"cpu_percent": 1.0, "ram_mb": 40,
-                                "ring_buffer_fill_pct": 0,
-                                "events_processed_since_last_heartbeat": 0},
+                    "metrics": {
+                        "cpu_percent": 1.0,
+                        "ram_mb": 40,
+                        "ring_buffer_fill_pct": 0,
+                        "events_processed_since_last_heartbeat": 0,
+                    },
                 },
                 headers=_api_headers(tenant_id),
             )

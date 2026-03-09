@@ -37,6 +37,7 @@ PG_DB = "openclaw"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _api_headers() -> dict:
     return {
         "Authorization": f"Bearer {ADMIN_TOKEN}",
@@ -47,7 +48,9 @@ def _api_headers() -> dict:
 def _psql(sql: str) -> str:
     result = subprocess.run(
         ["docker", "exec", PG_CONTAINER, "psql", "-U", PG_USER, "-d", PG_DB, "-c", sql],
-        capture_output=True, text=True, timeout=15,
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     if result.returncode != 0:
         raise RuntimeError(f"psql failed: {result.stderr}")
@@ -79,6 +82,7 @@ def _telemetry_event(agent_id: str, rule_id: str) -> bytes:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def api():
     with httpx.Client(base_url=PLATFORM_URL, headers=_api_headers(), timeout=15) as c:
@@ -95,8 +99,11 @@ def incident_id(api):
     r = api.post(
         "/api/v1/telemetry/batch",
         content=body,
-        headers={**_api_headers(), "X-Agent-ID": agent_id,
-                 "Content-Type": "application/x-ndjson"},
+        headers={
+            **_api_headers(),
+            "X-Agent-ID": agent_id,
+            "Content-Type": "application/x-ndjson",
+        },
     )
     assert r.status_code == 202, f"Telemetry failed: {r.status_code} {r.text}"
 
@@ -108,6 +115,7 @@ def incident_id(api):
 # ---------------------------------------------------------------------------
 # Pre-check
 # ---------------------------------------------------------------------------
+
 
 class TestAuditPreCheck:
     def test_platform_ready(self, api):
@@ -124,6 +132,7 @@ class TestAuditPreCheck:
 # ---------------------------------------------------------------------------
 # Audit log emission on incident actions
 # ---------------------------------------------------------------------------
+
 
 class TestAuditLogEmission:
     """Verify that incident lifecycle actions emit audit log entries."""
@@ -175,11 +184,16 @@ class TestAuditLogEmission:
         r = api.post(
             "/api/v1/telemetry/batch",
             content=body,
-            headers={**_api_headers(), "X-Agent-ID": agent_id,
-                     "Content-Type": "application/x-ndjson"},
+            headers={
+                **_api_headers(),
+                "X-Agent-ID": agent_id,
+                "Content-Type": "application/x-ndjson",
+            },
         )
         assert r.status_code == 202
-        inc_id = api.get("/api/v1/incidents", params={"agent_id": agent_id}).json()[0]["id"]
+        inc_id = api.get("/api/v1/incidents", params={"agent_id": agent_id}).json()[0][
+            "id"
+        ]
 
         before_out = _psql(
             "SELECT COUNT(*) FROM public.audit_logs WHERE action = 'incident.assigned';"
@@ -229,15 +243,14 @@ class TestAuditLogEmission:
 # Audit log API endpoint
 # ---------------------------------------------------------------------------
 
+
 class TestAuditLogApi:
     """Verify the GET /api/v1/audit endpoint introduced in Phase 2."""
 
     def test_audit_endpoint_accessible(self, api):
         """GET /api/v1/audit must return 200 for an admin."""
         r = api.get("/api/v1/audit")
-        assert r.status_code == 200, (
-            f"Audit endpoint failed: {r.status_code} {r.text}"
-        )
+        assert r.status_code == 200, f"Audit endpoint failed: {r.status_code} {r.text}"
 
     def test_audit_endpoint_returns_paginated_response(self, api):
         """Response must be {entries: [...], total: N}."""

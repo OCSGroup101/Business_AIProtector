@@ -16,35 +16,85 @@ logger = logging.getLogger(__name__)
 # ─── MITRE technique → kill-chain stage mapping ───────────────────────────────
 
 _MITRE_STAGE_MAP: dict[str, str] = {
-    "T1595": "reconnaissance", "T1592": "reconnaissance", "T1589": "reconnaissance",
-    "T1590": "reconnaissance", "T1591": "reconnaissance", "T1598": "reconnaissance",
-    "T1566": "initial_access", "T1190": "initial_access", "T1133": "initial_access",
-    "T1200": "initial_access", "T1091": "initial_access", "T1195": "initial_access",
-    "T1059": "execution", "T1203": "execution", "T1053": "execution",
-    "T1569": "execution", "T1204": "execution", "T1047": "execution",
-    "T1547": "persistence", "T1543": "persistence", "T1546": "persistence",
-    "T1136": "persistence", "T1098": "persistence", "T1197": "persistence",
-    "T1548": "privilege_escalation", "T1134": "privilege_escalation",
-    "T1055": "privilege_escalation", "T1068": "privilege_escalation",
-    "T1562": "defense_evasion", "T1070": "defense_evasion", "T1036": "defense_evasion",
-    "T1027": "defense_evasion", "T1553": "defense_evasion", "T1112": "defense_evasion",
-    "T1110": "credential_access", "T1003": "credential_access", "T1558": "credential_access",
-    "T1555": "credential_access", "T1552": "credential_access",
-    "T1087": "discovery", "T1083": "discovery", "T1057": "discovery",
-    "T1049": "discovery", "T1069": "discovery", "T1018": "discovery",
-    "T1021": "lateral_movement", "T1080": "lateral_movement", "T1550": "lateral_movement",
-    "T1560": "collection", "T1074": "collection", "T1114": "collection",
-    "T1056": "collection", "T1113": "collection", "T1125": "collection",
-    "T1041": "exfiltration", "T1020": "exfiltration", "T1048": "exfiltration",
-    "T1011": "exfiltration", "T1567": "exfiltration",
-    "T1485": "impact", "T1486": "impact", "T1490": "impact",
-    "T1489": "impact", "T1498": "impact",
+    "T1595": "reconnaissance",
+    "T1592": "reconnaissance",
+    "T1589": "reconnaissance",
+    "T1590": "reconnaissance",
+    "T1591": "reconnaissance",
+    "T1598": "reconnaissance",
+    "T1566": "initial_access",
+    "T1190": "initial_access",
+    "T1133": "initial_access",
+    "T1200": "initial_access",
+    "T1091": "initial_access",
+    "T1195": "initial_access",
+    "T1059": "execution",
+    "T1203": "execution",
+    "T1053": "execution",
+    "T1569": "execution",
+    "T1204": "execution",
+    "T1047": "execution",
+    "T1547": "persistence",
+    "T1543": "persistence",
+    "T1546": "persistence",
+    "T1136": "persistence",
+    "T1098": "persistence",
+    "T1197": "persistence",
+    "T1548": "privilege_escalation",
+    "T1134": "privilege_escalation",
+    "T1055": "privilege_escalation",
+    "T1068": "privilege_escalation",
+    "T1562": "defense_evasion",
+    "T1070": "defense_evasion",
+    "T1036": "defense_evasion",
+    "T1027": "defense_evasion",
+    "T1553": "defense_evasion",
+    "T1112": "defense_evasion",
+    "T1110": "credential_access",
+    "T1003": "credential_access",
+    "T1558": "credential_access",
+    "T1555": "credential_access",
+    "T1552": "credential_access",
+    "T1087": "discovery",
+    "T1083": "discovery",
+    "T1057": "discovery",
+    "T1049": "discovery",
+    "T1069": "discovery",
+    "T1018": "discovery",
+    "T1021": "lateral_movement",
+    "T1080": "lateral_movement",
+    "T1550": "lateral_movement",
+    "T1560": "collection",
+    "T1074": "collection",
+    "T1114": "collection",
+    "T1056": "collection",
+    "T1113": "collection",
+    "T1125": "collection",
+    "T1041": "exfiltration",
+    "T1020": "exfiltration",
+    "T1048": "exfiltration",
+    "T1011": "exfiltration",
+    "T1567": "exfiltration",
+    "T1485": "impact",
+    "T1486": "impact",
+    "T1490": "impact",
+    "T1489": "impact",
+    "T1498": "impact",
 }
 
 _KILL_CHAIN_ORDER = [
-    "reconnaissance", "initial_access", "execution", "persistence",
-    "privilege_escalation", "defense_evasion", "credential_access",
-    "discovery", "lateral_movement", "collection", "exfiltration", "impact",
+    "reconnaissance",
+    "initial_access",
+    "execution",
+    "persistence",
+    "privilege_escalation",
+    "defense_evasion",
+    "credential_access",
+    "discovery",
+    "lateral_movement",
+    "collection",
+    "exfiltration",
+    "impact",
 ]
 
 # ─── Tool definitions (Anthropic tool-use schema) ─────────────────────────────
@@ -84,7 +134,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "hostname": {"type": "string", "description": "The agent hostname to query."},
+                "hostname": {
+                    "type": "string",
+                    "description": "The agent hostname to query.",
+                },
                 "hours": {
                     "type": "integer",
                     "description": "Look-back window in hours. Default 168.",
@@ -230,23 +283,20 @@ async def _lookup_ioc(indicator: str, db: AsyncSession) -> dict[str, Any]:
     }
 
 
-async def _get_shared_iocs(
-    incident_ids: list[str], db: AsyncSession
-) -> dict[str, Any]:
+async def _get_shared_iocs(incident_ids: list[str], db: AsyncSession) -> dict[str, Any]:
     if not incident_ids:
         return {"shared_techniques": [], "shared_rules": []}
 
-    result = await db.execute(
-        select(Incident).where(Incident.id.in_(incident_ids))
-    )
+    result = await db.execute(select(Incident).where(Incident.id.in_(incident_ids)))
     incidents = result.scalars().all()
 
     from collections import Counter
+
     technique_counter: Counter[str] = Counter()
     rule_counter: Counter[str] = Counter()
 
     for inc in incidents:
-        for t in (inc.mitre_techniques or []):
+        for t in inc.mitre_techniques or []:
             technique_counter[t] += 1
         rule_counter[inc.rule_id] += 1
 
@@ -287,9 +337,7 @@ def _get_mitre_chain(techniques: list[str]) -> dict[str, Any]:
         "kill_chain_stages": ordered_stages,
         "highest_stage": ordered_stages[-1] if ordered_stages else None,
         "predicted_next_stage": next_stage,
-        "progression_pct": round(
-            len(ordered_stages) / len(_KILL_CHAIN_ORDER) * 100, 1
-        ),
+        "progression_pct": round(len(ordered_stages) / len(_KILL_CHAIN_ORDER) * 100, 1),
     }
 
 
