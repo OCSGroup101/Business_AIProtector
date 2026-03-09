@@ -131,7 +131,9 @@ async def create_deployment(
     await db.flush()
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else "dev_tenant"
+        str(getattr(http_request.state, "tenant_id", "dev_tenant") or "dev_tenant")
+        if http_request
+        else "dev_tenant"
     )
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None
@@ -260,7 +262,9 @@ async def pause_deployment(
     await db.flush()
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else "dev_tenant"
+        str(getattr(http_request.state, "tenant_id", "dev_tenant") or "dev_tenant")
+        if http_request
+        else "dev_tenant"
     )
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None
@@ -304,7 +308,9 @@ async def resume_deployment(
     await db.flush()
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else "dev_tenant"
+        str(getattr(http_request.state, "tenant_id", "dev_tenant") or "dev_tenant")
+        if http_request
+        else "dev_tenant"
     )
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None
@@ -351,7 +357,9 @@ async def rollback_deployment(
     await db.flush()
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else "dev_tenant"
+        str(getattr(http_request.state, "tenant_id", "dev_tenant") or "dev_tenant")
+        if http_request
+        else "dev_tenant"
     )
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None

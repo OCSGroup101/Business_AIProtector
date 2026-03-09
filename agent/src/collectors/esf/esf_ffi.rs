@@ -2,31 +2,34 @@
 //
 // macOS Endpoint Security Framework — direct C FFI bindings.
 //
-// This module is only compiled when the `macos-esf` feature is enabled.
-// It requires the com.apple.developer.endpoint-security.client entitlement
-// and Security Architect sign-off before any unsafe block is added or modified.
+// This module is only compiled when the `macos-esf` feature flag is enabled
+// (gate is in esf/mod.rs: `#[cfg(feature = "macos-esf")] pub mod esf_ffi;`).
+//
+// Requires: com.apple.developer.endpoint-security.client entitlement.
+// Every unsafe block must carry a `// SAFETY:` comment and Security Architect
+// sign-off per CLAUDE.md invariant #2.
 //
 // Current status: stub — full FFI implementation pending entitlement provisioning.
-// All production telemetry is collected via eslogger (Approach A in mod.rs) until
-// the entitlement is approved and this module is fully implemented.
+// All production telemetry uses eslogger (Approach A in mod.rs) until then.
 
-#[cfg(feature = "macos-esf")]
-pub mod bindings {
-    // SAFETY: FFI declarations below follow Apple's EndpointSecurity.h exactly.
-    // Each unsafe block requires Security Architect review per CLAUDE.md invariant #2.
-    // No unsafe code is present in this stub; it will be added under separate PR
-    // with architect sign-off once the entitlement is provisioned.
+use anyhow::Result;
 
-    /// Placeholder type — will be replaced with the real ESClient handle from
-    /// EndpointSecurity.framework once the FFI layer is implemented.
-    pub struct EsClient;
+/// Opaque handle to an EndpointSecurity client.
+/// Full implementation requires linking EndpointSecurity.framework.
+pub struct EsClient;
 
-    impl EsClient {
-        /// Stub constructor — returns an error until the FFI is implemented.
-        pub fn new() -> Result<Self, anyhow::Error> {
-            anyhow::bail!(
-                "macos-esf FFI not yet implemented; use eslogger (default) instead"
-            )
-        }
+impl EsClient {
+    /// Create a new ESF client.
+    /// Returns an error until the FFI layer is implemented.
+    pub fn new() -> Result<Self> {
+        anyhow::bail!("macos-esf FFI not yet implemented; use eslogger (default) instead")
+    }
+}
+
+impl Default for EsClient {
+    fn default() -> Self {
+        // Intentionally unreachable in practice — `new()` always returns Err.
+        // Required by clippy::new_without_default.
+        EsClient
     }
 }

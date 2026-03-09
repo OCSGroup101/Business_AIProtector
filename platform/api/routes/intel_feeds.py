@@ -110,7 +110,9 @@ async def create_custom_feed(
 ) -> CustomFeedResponse:
     """Register a new custom TAXII/STIX feed."""
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else None
+        str(getattr(http_request.state, "tenant_id", "unknown") or "unknown")
+        if http_request
+        else "unknown"
     ) or "dev_tenant"
 
     encrypted_key = _encrypt_api_key(body.api_key) if body.api_key else None
@@ -170,7 +172,9 @@ async def delete_custom_feed(
         )
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else "unknown"
+        str(getattr(http_request.state, "tenant_id", "unknown") or "unknown")
+        if http_request
+        else "unknown"
     )
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None

@@ -131,7 +131,9 @@ async def create_connector(
         )
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else None
+        str(getattr(http_request.state, "tenant_id", "unknown") or "unknown")
+        if http_request
+        else "unknown"
     ) or "dev_tenant"
 
     row = SiemConnectorModel(
@@ -194,7 +196,9 @@ async def delete_connector(
         )
 
     tenant_id = (
-        getattr(http_request.state, "tenant_id", None) if http_request else "unknown"
+        str(getattr(http_request.state, "tenant_id", "unknown") or "unknown")
+        if http_request
+        else "unknown"
     )
     actor_ip = (
         http_request.client.host if http_request and http_request.client else None
@@ -272,7 +276,7 @@ async def forward_incident(
 
     incident_dict: dict[str, Any] = {
         "id": incident.id,
-        "title": incident.title,
+        "title": incident.rule_name,
         "severity": incident.severity,
         "status": incident.status,
         "rule_id": incident.rule_id,

@@ -291,6 +291,11 @@ jobs:
         with:
           version: "3.16.0"
 
+      - name: Resolve Helm dependencies
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm dependency build helm/openclaw
+
       - name: Helm lint
         run: helm lint helm/openclaw/
 

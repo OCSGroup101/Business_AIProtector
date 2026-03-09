@@ -118,6 +118,9 @@ async def create_or_update_incident(
         )
     else:
         # Update existing — bump last_seen and escalate severity if higher
+        assert (
+            incident is not None
+        )  # guaranteed: is_new is False iff scalar_one_or_none() returned a row
         incident.last_seen_at = now
         _severity_rank = {"INFO": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
         if _severity_rank.get(severity, 0) > _severity_rank.get(incident.severity, 0):

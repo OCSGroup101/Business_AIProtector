@@ -114,7 +114,7 @@ async def run_correlation_agent(
             thinking={"type": "adaptive"},
             system=_SYSTEM_PROMPT,
             tools=TOOL_DEFINITIONS,  # type: ignore[arg-type]
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
         ) as stream:
             response = await stream.get_final_message()
 

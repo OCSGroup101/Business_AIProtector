@@ -99,7 +99,7 @@ def score_agent(features: dict[str, float]) -> tuple[float, str]:
             import numpy as np  # type: ignore[import-untyped]
 
             vec = np.array([_feature_vector(features)], dtype=float)
-            prob = float(model.predict_proba(vec)[0][1])  # P(high_risk)
+            prob = float(model.predict_proba(vec)[0][1])  # type: ignore[attr-defined]  # P(high_risk)
             return prob, _tier(prob)
         except Exception as exc:
             logger.warning(

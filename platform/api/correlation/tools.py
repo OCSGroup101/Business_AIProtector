@@ -278,7 +278,7 @@ async def _lookup_ioc(indicator: str, db: AsyncSession) -> dict[str, Any]:
         "indicator": indicator,
         "ioc_type": row.ioc_type,
         "score": row.score,
-        "source": row.source,
+        "source": row.sources,
         "tags": row.tags or [],
     }
 

@@ -77,7 +77,9 @@ async def ingest_telemetry_batch(
     for event in events:
         # Stream every event to Kafka for real-time consumers regardless of detections
         try:
-            await kafka_producer.produce(tenant_id or "unknown", event)
+            await kafka_producer.produce(
+                tenant_id or "unknown", json.dumps(event).encode()
+            )
         except Exception:
             logger.debug("Kafka produce skipped (not connected or feature disabled)")
 
