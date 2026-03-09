@@ -1,0 +1,79 @@
+# Copyright 2024 Omni Cyber Solutions LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Production overrides for OmniProtect on GKE (omniprotect-prod)
+# Applied on top of values.yaml by the CD pipeline.
+
+replicaCount:
+  api: 2
+  console: 2
+
+resources:
+  api:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  console:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+ingress:
+  enabled: true
+  className: nginx
+  host: omniprotect.omnicybersolutions.com
+  tls:
+    enabled: true
+    secretName: omniprotect-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# Cloud SQL (PostgreSQL) via Cloud SQL Auth Proxy sidecar
+postgresql:
+  external: true
+  host: "127.0.0.1"   # Cloud SQL Auth Proxy sidecar
+  port: 5432
+  database: omniprotect
+  existingSecret: omniprotect-db-credentials
+  connectionName: "omniprotect-prod:us-central1:omniprotect-pg"
+
+# Managed Redis (Memorystore)
+redis:
+  external: true
+  host: ""   # Set by Terraform output / Secret
+  port: 6379
+  existingSecret: omniprotect-redis-credentials
+
+# Keycloak (deployed in-cluster)
+keycloak:
+  enabled: true
+  realm: omniprotect-platform
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8888"
+  prometheus.io/path: "/metrics"
