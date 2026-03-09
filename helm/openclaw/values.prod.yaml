@@ -15,73 +15,57 @@
 # Production overrides for OmniProtect on GKE (omniprotect-prod)
 # Applied on top of values.yaml by the CD pipeline.
 
-# Disable bundled sub-charts — managed GCP services used instead
+# ── Disable bundled sub-charts (managed GCP services used instead) ────────────
 postgresql:
   enabled: false
+  external:
+    host: "127.0.0.1"   # Cloud SQL Auth Proxy sidecar
+    port: 5432
+
 redis:
   enabled: false
+
 kafka:
   enabled: false
 
-replicaCount:
-  api: 2
-  console: 2
+minio:
+  enabled: false
 
-resources:
-  api:
-    requests:
-      cpu: "250m"
-      memory: "512Mi"
-    limits:
-      cpu: "1000m"
-      memory: "1Gi"
-  console:
-    requests:
-      cpu: "100m"
-      memory: "256Mi"
-    limits:
-      cpu: "500m"
-      memory: "512Mi"
+# ── Platform API ──────────────────────────────────────────────────────────────
+platformApi:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
 
+# ── Console ───────────────────────────────────────────────────────────────────
+console:
+  replicaCount: 2
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
 ingress:
   enabled: true
   className: nginx
-  host: omniprotect.omnicybersolutions.com
-  tls:
-    enabled: true
-    secretName: omniprotect-tls
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: omniprotect.omnicybersolutions.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: platform-api
+        - path: /
+          pathType: Prefix
+          service: console
+  tls:
+    - secretName: omniprotect-tls
+      hosts:
+        - omniprotect.omnicybersolutions.com
 
-autoscaling:
-  enabled: true
-  minReplicas: 2
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 70
-
-# Cloud SQL (PostgreSQL) via Cloud SQL Auth Proxy sidecar
-postgresql:
-  external: true
-  host: "127.0.0.1"   # Cloud SQL Auth Proxy sidecar
-  port: 5432
-  database: omniprotect
-  existingSecret: omniprotect-db-credentials
-  connectionName: "omniprotect-prod:us-central1:omniprotect-pg"
-
-# Managed Redis (Memorystore)
-redis:
-  external: true
-  host: ""   # Set by Terraform output / Secret
-  port: 6379
-  existingSecret: omniprotect-redis-credentials
-
-# Keycloak (deployed in-cluster)
+# ── Keycloak ──────────────────────────────────────────────────────────────────
 keycloak:
-  enabled: true
-  realm: omniprotect-platform
-
-podAnnotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8888"
-  prometheus.io/path: "/metrics"
+  externalUrl: "https://omniprotect.omnicybersolutions.com/auth"
