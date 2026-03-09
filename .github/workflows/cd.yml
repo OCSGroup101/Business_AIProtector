@@ -152,13 +152,30 @@ jobs:
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm dependency build helm/openclaw
 
+      - name: Apply Keycloak realm ConfigMap
+        run: |
+          kubectl create namespace omniprotect --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create configmap keycloak-realm-import \
+            --from-file=realm.json=platform/deployment/keycloak/realms/omniprotect-platform-realm.json \
+            --namespace omniprotect \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Verify required secrets exist
+        run: |
+          kubectl get secret openclaw-secrets -n omniprotect || \
+            { echo "ERROR: openclaw-secrets not found. Create DATABASE_URL, REDIS_URL, SECRET_KEY before deploying."; exit 1; }
+          kubectl get secret keycloak-admin-secret -n omniprotect || \
+            { echo "ERROR: keycloak-admin-secret not found."; \
+              echo "Run: kubectl create secret generic keycloak-admin-secret --from-literal=admin-password='<password>' -n omniprotect"; \
+              exit 1; }
+
       - name: Deploy via Helm
         run: |
           helm upgrade --install omniprotect helm/openclaw \
             --namespace omniprotect \
             --create-namespace \
             --atomic \
-            --timeout 10m \
+            --timeout 15m \
             --set platformApi.image.repository=${{ env.REPO }}/platform-api \
             --set platformApi.image.tag=${{ needs.build-push.outputs.sha_tag }} \
             --set console.image.repository=${{ env.REPO }}/console \
@@ -170,6 +187,7 @@ jobs:
         run: |
           kubectl rollout status deployment/omniprotect-openclaw-api -n omniprotect --timeout=5m
           kubectl rollout status deployment/omniprotect-openclaw-console -n omniprotect --timeout=5m
+          kubectl rollout status deployment/omniprotect-openclaw-keycloak -n omniprotect --timeout=5m
 
       - name: Post deployment summary
         run: |

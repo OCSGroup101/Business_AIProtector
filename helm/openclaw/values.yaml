@@ -132,9 +132,38 @@ kafka:
 
 # ── Keycloak ──────────────────────────────────────────────────────────────────
 keycloak:
-  # Deploy Keycloak separately — this chart does NOT include Keycloak
-  # Set externalUrl to your Keycloak instance URL
+  enabled: false
+  # Set to true to deploy Keycloak via Bitnami sub-chart with realm import.
+  # In production (values.prod.yaml) this is enabled with the omniprotect-platform realm.
   externalUrl: ""
+  # Bitnami Keycloak sub-chart config (used when enabled: true)
+  httpRelativePath: "/auth"
+  auth:
+    adminUser: admin
+    existingSecret: keycloak-admin-secret
+    passwordSecretKey: admin-password
+  extraStartupArgs: "--import-realm"
+  extraVolumes:
+    - name: realm-config
+      configMap:
+        name: "openclaw-keycloak-realm"   # overridden in prod via fullnameOverride
+  extraVolumeMounts:
+    - name: realm-config
+      mountPath: /opt/bitnami/keycloak/data/import
+  service:
+    type: ClusterIP
+    ports:
+      http: 80
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  # realmJson is templated into the ConfigMap above.
+  # Override in values.prod.yaml with the production realm JSON string.
+  realmJson: "{}"
 
 # ── MinIO ─────────────────────────────────────────────────────────────────────
 minio:

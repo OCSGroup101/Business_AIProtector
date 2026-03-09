@@ -1,0 +1,18 @@
+{{/* Copyright 2026 Omni Cyber Solutions LLC. Apache License 2.0. */}}
+{{/*
+  Creates a Keycloak realm import ConfigMap using the OSS realm JSON bundled with the chart.
+  In production deployments the CD pipeline creates an external ConfigMap (keycloak-realm-import)
+  from the private realm JSON (including MSP admin users) and overrides keycloak.extraVolumes
+  in values.prod.yaml to reference it. This template is used for dev/self-hosted deployments only.
+*/}}
+{{- if and .Values.keycloak.enabled (not .Values.keycloak.externalRealmConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openclaw.fullname" . }}-keycloak-realm
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+data:
+  realm.json: |-
+    {{ .Files.Get "files/realm.json" | indent 4 }}
+{{- end }}

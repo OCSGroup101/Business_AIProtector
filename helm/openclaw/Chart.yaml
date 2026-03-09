@@ -28,3 +28,7 @@ dependencies:
     version: "28.x.x"
     repository: https://charts.bitnami.com/bitnami
     condition: kafka.enabled
+  - name: keycloak
+    version: "22.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: keycloak.enabled

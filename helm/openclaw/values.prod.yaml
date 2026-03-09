@@ -55,6 +55,9 @@ ingress:
   hosts:
     - host: omniprotect.omnicybersolutions.com
       paths:
+        - path: /auth
+          pathType: Prefix
+          service: keycloak
         - path: /api
           pathType: Prefix
           service: platform-api
@@ -67,5 +70,36 @@ ingress:
         - omniprotect.omnicybersolutions.com
 
 # ── Keycloak ──────────────────────────────────────────────────────────────────
+# Deployed via Bitnami sub-chart. Realm is imported on first start from the
+# keycloak-realm-import ConfigMap created by the CD pipeline before helm upgrade.
+# MSP admin users (glenn, brett, steve @omnicybersolutions.com) are included in
+# the realm JSON with temporary passwords (force-change + TOTP on first login).
 keycloak:
+  enabled: true
   externalUrl: "https://omniprotect.omnicybersolutions.com/auth"
+  externalRealmConfigMap: true   # disables chart-internal configmap-keycloak-realm.yaml
+  fullnameOverride: omniprotect-openclaw-keycloak
+  httpRelativePath: "/auth"
+  auth:
+    adminUser: admin
+    existingSecret: keycloak-admin-secret
+    passwordSecretKey: admin-password
+  extraStartupArgs: "--import-realm"
+  extraVolumes:
+    - name: realm-config
+      configMap:
+        name: keycloak-realm-import
+  extraVolumeMounts:
+    - name: realm-config
+      mountPath: /opt/bitnami/keycloak/data/import
+  service:
+    type: ClusterIP
+    ports:
+      http: 80
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi

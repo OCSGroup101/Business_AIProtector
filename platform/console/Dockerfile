@@ -27,6 +27,17 @@ COPY . .
 
 # next.config.mjs must have output: "standalone" for this to work
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build-time public env vars — passed via docker build-args in CD pipeline
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_KEYCLOAK_URL
+ARG NEXT_PUBLIC_KEYCLOAK_REALM
+ARG NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_KEYCLOAK_URL=$NEXT_PUBLIC_KEYCLOAK_URL
+ENV NEXT_PUBLIC_KEYCLOAK_REALM=$NEXT_PUBLIC_KEYCLOAK_REALM
+ENV NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=$NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
+
 RUN npm run build
 
 # ── Runner stage ──────────────────────────────────────────────────────────────

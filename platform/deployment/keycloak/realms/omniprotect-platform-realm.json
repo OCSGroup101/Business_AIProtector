@@ -1,0 +1,107 @@
+{
+  "realm": "omniprotect-platform",
+  "enabled": true,
+  "displayName": "OmniProtect Platform",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername()",
+  "clients": [
+    {
+      "clientId": "omniprotect-console",
+      "name": "OmniProtect Management Console",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "https://omniprotect.omnicybersolutions.com/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "https://omniprotect.omnicybersolutions.com"
+      ],
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "omniprotect-platform-api",
+      "name": "OmniProtect Platform API",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "msp_operator", "description": "MSP admin — cross-tenant management and client provisioning" },
+      { "name": "tenant_admin", "description": "Full tenant administration" },
+      { "name": "security_admin", "description": "Security operations" },
+      { "name": "helpdesk", "description": "Helpdesk and agent visibility" },
+      { "name": "auditor", "description": "Read-only audit access" }
+    ]
+  },
+  "users": [
+    {
+      "username": "glenn@omnicybersolutions.com",
+      "email": "glenn@omnicybersolutions.com",
+      "firstName": "Glenn",
+      "lastName": "",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Glenn@0mni2026",
+          "temporary": true
+        }
+      ],
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
+      "realmRoles": ["msp_operator"]
+    },
+    {
+      "username": "brett@omnicybersolutions.com",
+      "email": "brett@omnicybersolutions.com",
+      "firstName": "Brett",
+      "lastName": "",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Brett@0mni2026",
+          "temporary": true
+        }
+      ],
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
+      "realmRoles": ["msp_operator"]
+    },
+    {
+      "username": "steve@omnicybersolutions.com",
+      "email": "steve@omnicybersolutions.com",
+      "firstName": "Steve",
+      "lastName": "",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Steve@0mni2026",
+          "temporary": true
+        }
+      ],
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
+      "realmRoles": ["msp_operator"]
+    }
+  ],
+  "defaultRoles": []
+}
