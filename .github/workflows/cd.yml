@@ -159,11 +159,10 @@ jobs:
             --create-namespace \
             --atomic \
             --timeout 10m \
-            --set image.api.repository=${{ env.REPO }}/platform-api \
-            --set image.api.tag=${{ needs.build-push.outputs.sha_tag }} \
-            --set image.console.repository=${{ env.REPO }}/console \
-            --set image.console.tag=${{ needs.build-push.outputs.sha_tag }} \
-            --set ingress.host=omniprotect.omnicybersolutions.com \
+            --set platformApi.image.repository=${{ env.REPO }}/platform-api \
+            --set platformApi.image.tag=${{ needs.build-push.outputs.sha_tag }} \
+            --set console.image.repository=${{ env.REPO }}/console \
+            --set console.image.tag=${{ needs.build-push.outputs.sha_tag }} \
             --values helm/openclaw/values.prod.yaml \
             --wait
 
