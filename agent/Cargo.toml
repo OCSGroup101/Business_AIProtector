@@ -85,7 +85,7 @@ sysinfo = "0.30"
 notify = { version = "6.1", features = ["serde"] }
 
 # ─── Certificate / CSR generation (enrollment) ───────────────────────────────
-rcgen = "0.12"
+rcgen = "0.14"
 
 # ─── XML parsing (Windows Security Event Log rendering) ──────────────────────
 quick-xml = "0.36"
