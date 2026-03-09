@@ -123,7 +123,7 @@ cpal = { version = "0.15", optional = true }
 rdkafka = { version = "0.36", features = ["cmake-build", "ssl"], optional = true }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.8", features = ["html_reports"] }
 tempfile = "3.10"
 tokio-test = "0.4"
 mockall = "0.12"
