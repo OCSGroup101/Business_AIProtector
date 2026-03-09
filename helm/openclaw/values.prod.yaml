@@ -15,6 +15,14 @@
 # Production overrides for OmniProtect on GKE (omniprotect-prod)
 # Applied on top of values.yaml by the CD pipeline.
 
+# Disable bundled sub-charts — managed GCP services used instead
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+kafka:
+  enabled: false
+
 replicaCount:
   api: 2
   console: 2
