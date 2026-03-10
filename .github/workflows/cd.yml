@@ -72,7 +72,7 @@ jobs:
       # ── Platform API ────────────────────────────────────────────────────────
       - name: Extract API image metadata
         id: meta-api
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REPO }}/platform-api
           tags: |
@@ -93,7 +93,7 @@ jobs:
       # ── Console ─────────────────────────────────────────────────────────────
       - name: Extract console image metadata
         id: meta-console
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REPO }}/console
           tags: |
