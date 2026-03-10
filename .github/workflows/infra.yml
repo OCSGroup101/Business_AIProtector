@@ -51,7 +51,7 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Authenticate to Google Cloud (OIDC)
         uses: google-github-actions/auth@v2

@@ -54,7 +54,7 @@ jobs:
       sha_tag: ${{ github.sha }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Authenticate to Google Cloud (OIDC)
         id: auth
@@ -128,7 +128,7 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Authenticate to Google Cloud (OIDC)
         uses: google-github-actions/auth@v2
