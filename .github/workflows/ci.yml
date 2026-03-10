@@ -145,7 +145,7 @@ jobs:
         run: cargo audit --file agent/Cargo.lock
 
       - name: Upload SAST reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sast-reports
@@ -329,7 +329,7 @@ jobs:
         run: cargo build --manifest-path agent/Cargo.toml --release --target ${{ matrix.target }}
 
       - name: Upload macOS agent artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openclaw-agent-macos-${{ matrix.target }}-${{ github.sha }}
           path: agent/target/${{ matrix.target }}/release/openclaw-agent
@@ -363,7 +363,7 @@ jobs:
           lipo -info dist/openclaw-agent-universal
 
       - name: Upload universal binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openclaw-agent-macos-universal-${{ github.sha }}
           path: dist/openclaw-agent-universal
@@ -469,7 +469,7 @@ jobs:
             --format table
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: openclaw-binaries-${{ github.sha }}
           path: |
