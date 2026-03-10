@@ -31,7 +31,7 @@ jobs:
     name: "Stage 0 — Secret Scan (Gitleaks)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # Full history for accurate scanning
 
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -159,7 +159,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-rust, sast]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -194,7 +194,7 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -228,7 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-rust, sast]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -245,7 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-typescript, sast]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -265,7 +265,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [quality-python, sast]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -284,7 +284,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -314,7 +314,7 @@ jobs:
       matrix:
         target: [x86_64-apple-darwin, aarch64-apple-darwin]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
@@ -340,7 +340,7 @@ jobs:
     runs-on: macos-14
     needs: build-agent-macos
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download x86_64 artifact
         uses: actions/download-artifact@v4
@@ -375,7 +375,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-agent, test-rdk, test-platform, test-console, test-sdk, lint-helm]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # ─── Rust cross-compilation (4 targets) ─────────────────────────────
       - uses: dtolnay/rust-toolchain@stable
@@ -485,7 +485,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: secret-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install trivy
         run: |
@@ -503,7 +503,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -547,7 +547,7 @@ jobs:
       id-token: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
@@ -582,7 +582,7 @@ jobs:
       id-token: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Cosign + syft
         uses: sigstore/cosign-installer@v3
@@ -609,7 +609,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: ZAP Authenticated Scan
         uses: zaproxy/action-full-scan@v0.10.0
