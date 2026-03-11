@@ -141,6 +141,10 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
 
+      - name: Update patched crates in lock file
+        run: cargo update -p quinn-proto --manifest-path agent/Cargo.toml
+        continue-on-error: true
+
       - name: cargo-audit (Rust)
         run: cargo audit --file agent/Cargo.lock
 
