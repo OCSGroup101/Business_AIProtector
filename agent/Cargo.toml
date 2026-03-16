@@ -55,7 +55,7 @@ lmdb-rkv = "0.14"
 mlua = { version = "0.9", features = ["lua54", "vendored", "async", "serialize"] }
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-config = { version = "0.14", features = ["toml"] }
+config = { version = "0.15", features = ["toml"] }
 clap = { version = "4.5", features = ["derive", "env"] }
 
 # ─── Cryptography (update verification) ──────────────────────────────────────
