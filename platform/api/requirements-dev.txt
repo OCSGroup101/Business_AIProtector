@@ -8,5 +8,5 @@ ruff==0.6.9
 mypy==1.11.2
 bandit[toml]==1.7.10
 semgrep==1.90.0
-factory-boy==3.3.1
+factory-boy==3.3.3
 faker==30.3.0
